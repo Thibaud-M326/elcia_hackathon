@@ -14,13 +14,13 @@ public class ValidatorTests
     [Fact]
     public void Validate_RejectsEmptyId()
     {
-        AssertInvalid(p => p.Parameters[2].Id = "", "identifiant vide");
+        AssertValidationError(p => p.Parameters[2].Id = "", "identifiant vide");
     }
 
     [Fact]
     public void Validate_RejectsDuplicateId()
     {
-        AssertInvalid(p => p.Parameters[2].Id = "largeur", "identifiant en double");
+        AssertValidationError(p => p.Parameters[2].Id = "largeur", "identifiant en double");
     }
 
     [Theory]
@@ -28,7 +28,7 @@ public class ValidatorTests
     [InlineData("dormant.interieur")]
     public void Validate_RejectsInvalidIdCharacters(string id)
     {
-        AssertInvalid(p => p.Parameters[2].Id = id, "ni espace ni point");
+        AssertValidationError(p => p.Parameters[2].Id = id, "ni espace ni point");
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class ValidatorTests
     [Fact]
     public void Validate_RejectsEmptyChoices()
     {
-        AssertInvalid(p =>
+        AssertValidationError(p =>
         {
             Parameter parameter = p.Parameters[3];
             parameter.Choices!.Clear();
@@ -217,6 +217,116 @@ public class ValidatorTests
         Assert.Collection(Validator.Validate(product),
             error => Assert.Contains("Option 'oscillo' : le montant fixe", error),
             error => Assert.Contains("Surcharge 'grande-largeur' : le montant fixe", error));
+    }
+
+    [Fact]
+    public void Validate_ReportsEmptyAndDuplicateRuleIds()
+    {
+        Product product = ReadSample();
+        product.Rules[0].Id = " ";
+        product.Rules[2].Id = product.Rules[1].Id;
+
+        Assert.Collection(Validator.Validate(product),
+            error => Assert.Contains("identifiant de règle vide", error),
+            error => Assert.Contains("identifiant de règle en double", error));
+    }
+
+    [Fact]
+    public void Validate_ChecksBothOptionReferences()
+    {
+        Product product = ReadSample();
+        Rule rule = product.Rules[2];
+        rule.Option = "inconnue";
+        rule.Other = "largeur";
+
+        Assert.Collection(Validator.Validate(product),
+            error => Assert.Contains("'option' référence le paramètre introuvable", error),
+            error => Assert.Contains("'other' doit référencer une option", error));
+    }
+
+    [Fact]
+    public void Validate_RejectsRuleThatReferencesItself()
+    {
+        AssertInvalid(p => p.Rules[3].Other = "motorisation", "ne peut pas porter sur elle-même");
+    }
+
+    [Fact]
+    public void Validate_ReportsMissingRequiredRuleFields()
+    {
+        Product product = ReadSample();
+        product.Rules[0].When.Clear();
+        product.Rules[0].Message = " ";
+        product.Rules[4].When.Clear();
+        product.Rules[4].Label = null;
+        product.Rules[4].Price = null;
+
+        Assert.Collection(Validator.Validate(product),
+            error => Assert.Contains("au moins une condition", error),
+            error => Assert.Contains("message obligatoire", error),
+            error => Assert.Contains("au moins une condition", error),
+            error => Assert.Contains("libellé de surcharge obligatoire", error),
+            error => Assert.Contains("prix de surcharge obligatoire", error));
+    }
+
+    [Fact]
+    public void Validate_ReportsUnknownConditionAndMessageParameters()
+    {
+        Product product = ReadSample();
+        product.Rules[0].When[0].Param = "inconnu";
+        product.Rules[3].Message = "Option {volet} avec {inconnue}.";
+
+        Assert.Collection(Validator.Validate(product),
+            error => Assert.Contains("condition 1 : paramètre 'inconnu' introuvable", error),
+            error => Assert.Contains("paramètre de message 'inconnue' introuvable", error));
+    }
+
+    [Theory]
+    [InlineData(Op.Gte)]
+    [InlineData(Op.Lte)]
+    public void Validate_RejectsNumericComparisonsOnChoices(Op operation)
+    {
+        AssertInvalid(p => p.Rules[4].When[0].Op = operation, "exigent un paramètre numérique");
+    }
+
+    [Fact]
+    public void Validate_RejectsNonNumericAndNonBooleanConditionValues()
+    {
+        Product product = ReadSample();
+        product.Rules[0].When[0].Value = JsonSerializer.SerializeToElement("60");
+        product.Rules[5].When[1].Value = JsonSerializer.SerializeToElement("true");
+
+        Assert.Collection(Validator.Validate(product),
+            error => Assert.Contains("la valeur doit être un nombre décimal", error),
+            error => Assert.Contains("la valeur doit être un booléen", error));
+    }
+
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("\"blanc\"")]
+    public void Validate_RequiresNonEmptyListForIn(string json)
+    {
+        AssertInvalid(p => p.Rules[1].When[0].Value = JsonSerializer.Deserialize<JsonElement>(json),
+            "in exige une liste non vide");
+    }
+
+    [Fact]
+    public void Validate_ChecksEachChoiceInList()
+    {
+        Product product = ReadSample();
+        product.Rules[1].When[0].Value =
+            JsonSerializer.Deserialize<JsonElement>("[\"blanc\", \"chêne\", 42]");
+
+        Assert.Collection(Validator.Validate(product),
+            error => Assert.Contains("élément 2 : le choix 'chêne'", error),
+            error => Assert.Contains("élément 3 : la valeur doit être du texte", error));
+    }
+
+    private static void AssertValidationError(Action<Product> change, string expectedMessage)
+    {
+        Product product = ReadSample();
+        change(product);
+
+        Assert.Contains(Validator.Validate(product), error => error.Contains(expectedMessage));
     }
 
     private static Product ReadSample() => Json.ReadProduct("product-model-v1.json");

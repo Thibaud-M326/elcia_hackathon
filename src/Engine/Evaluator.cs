@@ -87,12 +87,25 @@ public static class Evaluator
 
         decimal? basePrice = row >= 0 && col >= 0 ? p.Grid.Prices[row][col] : null;
 
-        if (basePrice == null)
-            evalRes.Errors.Add($"Dimensions {width} × {height} non fabricables.");
-        else
-            evalRes.PriceLines.Add(new PriceLine { Label = "Prix de base", Amount = basePrice.Value });
-
         evalRes.Values = values;
+
+        if (basePrice == null)
+        {
+            evalRes.Errors.Add($"Dimensions {width} × {height} non fabricables.");
+            return evalRes;
+        }
+
+        evalRes.PriceLines.Add(new PriceLine { Label = "Prix de base", Amount = basePrice.Value });
+        
+        var selectedOptions = p.Parameters.Where(x =>
+            x.Type == ParamType.Option && x.Price != null && (bool)values[x.Id]);
+
+        foreach (Parameter option in selectedOptions)
+        {
+            decimal amount = Amount(option.Price!, basePrice.Value, values);
+            evalRes.PriceLines.Add(new PriceLine { Label = option.Label, Amount = amount });
+        }
+
         evalRes.Valid = evalRes.Errors.Count == 0;
         return evalRes;
     }
@@ -119,5 +132,18 @@ public static class Evaluator
         }
 
         return -1;
+    }
+
+    private static decimal Amount(Price price, decimal basePrice, Dictionary<string, object> values)
+    {
+        decimal amount = price.Type switch
+        {
+            PriceType.Fixed => price.Amount,
+            PriceType.Percent => basePrice * price.Rate / 100,
+            PriceType.PerUnit => price.Rate * (decimal)values[price.Param!],
+            _ => throw new InvalidOperationException($"Type de prix inconnu : {price.Type}."),
+        };
+
+        return Math.Round(amount, 2, MidpointRounding.AwayFromZero);
     }
 }

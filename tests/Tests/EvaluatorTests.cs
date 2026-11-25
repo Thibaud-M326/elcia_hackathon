@@ -142,9 +142,8 @@ public class EvaluatorTests
     [Fact]
     public void Empty_cell_in_the_middle_is_not_manufacturable()
     {
-        // Copie fraîche du produit : on ne modifie pas P, partagé par les autres tests
         Product product = Json.ReadProduct("product-model-v1.json");
-        product.Grid.Prices[2][3] = null;   // hauteur 1200, largeur 1500
+        product.Grid.Prices[2][3] = null; 
 
         var exact = Evaluator.Evaluate(product, 1,
             new Dictionary<string, object?> { ["largeur"] = 1500, ["hauteur"] = 1200 });
@@ -155,5 +154,74 @@ public class EvaluatorTests
         Assert.Contains("Dimensions 1500 × 1200 non fabricables.", exact.Errors);
         Assert.False(nextStep.Valid);
         Assert.Contains("Dimensions 1400 × 1100 non fabricables.", nextStep.Errors);
+    }
+
+    // ---------- A3 : prix des options ----------
+
+    private static decimal LineAmount(EvaluationResult r, string label)
+        => r.PriceLines.Single(l => l.Label == label).Amount;
+
+    [Fact]
+    public void Fixed_price_option()
+    {
+        var r = Eval(new() { ["oscillo"] = true });
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(55m, LineAmount(r, "Oscillo-battant"));
+    }
+
+    [Fact]
+    public void Percent_price_option_uses_base_price()
+    {
+        var r = Eval(new() { ["feuillete"] = true });   // 15 % de 419 €
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(62.85m, LineAmount(r, "Vitrage feuilleté"));
+    }
+
+    [Fact]
+    public void Per_unit_price_option_uses_another_parameter()
+    {
+        var r = Eval(new() { ["croisillons"] = true });   // 0,05 € × 1200 mm
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(60m, LineAmount(r, "Croisillons"));
+    }
+
+    [Fact]
+    public void Per_unit_price_follows_the_parameter_value()
+    {
+        var r = Eval(new() { ["volet"] = true, ["largeur"] = 1500 });   // 0,18 € × 1500 mm
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(270m, LineAmount(r, "Volet roulant"));
+    }
+
+    [Fact]
+    public void Several_options_give_one_line_each()
+    {
+        var r = Eval(new() { ["oscillo"] = true, ["feuillete"] = true });
+
+        Assert.Equal(3, r.PriceLines.Count);   // prix de base + 2 options
+        Assert.Equal(55m, LineAmount(r, "Oscillo-battant"));
+        Assert.Equal(62.85m, LineAmount(r, "Vitrage feuilleté"));
+    }
+
+    [Fact]
+    public void Unselected_options_add_no_line()
+    {
+        var r = Eval(new());
+
+        var line = Assert.Single(r.PriceLines);
+        Assert.Equal("Prix de base", line.Label);
+    }
+
+    [Fact]
+    public void No_option_line_when_not_manufacturable()
+    {
+        var r = Eval(new() { ["largeur"] = 2400, ["hauteur"] = 2100, ["oscillo"] = true });
+
+        Assert.False(r.Valid);
+        Assert.Empty(r.PriceLines);
     }
 }

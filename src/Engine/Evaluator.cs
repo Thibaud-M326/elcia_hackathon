@@ -84,6 +84,9 @@ public static class Evaluator
         HashSet<string> autoAdded = Cascade(p, values);
         AddOptionStates(evalRes, p, values, autoAdded);
 
+        ApplyAvailableIf(evalRes, p, values);
+        ApplyIncompatible(evalRes, p, values);
+
         decimal width = (decimal)values["largeur"];
         decimal height = (decimal)values["hauteur"];
 
@@ -230,6 +233,75 @@ public static class Evaluator
 
     private static bool IsSelected(Dictionary<string, object> values, string? id)
         => id != null && values.TryGetValue(id, out object? value) && value is true;
+
+    private static void ApplyAvailableIf(EvaluationResult evalRes, Product p, Dictionary<string, object> values)
+    {
+        foreach (Rule rule in p.Rules)
+        {
+            if (rule.Type != RuleType.AvailableIf || Matches(values, rule.When))
+                continue;
+
+            OptionState? option = FindOption(evalRes, rule.Option);
+            if (option == null)
+                continue;
+
+            string message = Fill(rule.Message, values);
+            MakeUnavailable(option, message);
+
+            if (option.Selected)
+                evalRes.Errors.Add(message);
+        }
+    }
+
+    private static void ApplyIncompatible(EvaluationResult evalRes, Product p, Dictionary<string, object> values)
+    {
+        foreach (Rule rule in p.Rules)
+        {
+            if (rule.Type != RuleType.Incompatible)
+                continue;
+
+            OptionState? first = FindOption(evalRes, rule.Option);
+            OptionState? second = FindOption(evalRes, rule.Other);
+            if (first == null || second == null)
+                continue;
+
+            string message = Fill(rule.Message, values);
+
+            if (first.Selected && second.Selected)
+                evalRes.Errors.Add(message);
+            else if (first.Selected)
+                MakeUnavailable(second, message);
+            else if (second.Selected)
+                MakeUnavailable(first, message);
+        }
+    }
+
+    private static void MakeUnavailable(OptionState option, string reason)
+    {
+        option.Available = false;
+        option.Reasons.Add(reason);
+    }
+
+    private static OptionState? FindOption(EvaluationResult evalRes, string? id)
+    {
+        foreach (OptionState option in evalRes.Options)
+        {
+            if (option.Id == id)
+                return option;
+        }
+
+        return null;
+    }
+
+    private static string Fill(string? message, Dictionary<string, object> values)
+    {
+        string result = message ?? "";
+
+        foreach (KeyValuePair<string, object> entry in values)
+            result = result.Replace("{" + entry.Key + "}", entry.Value.ToString());
+
+        return result;
+    }
 
     private static decimal Amount(Price price, decimal basePrice, Dictionary<string, object> values)
     {

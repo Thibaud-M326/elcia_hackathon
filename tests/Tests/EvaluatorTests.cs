@@ -300,4 +300,99 @@ public class EvaluatorTests
         Assert.True(Option(r, "motorisation").Selected);
         Assert.True(Option(r, "motorisation").AutoAdded);
     }
+
+    // ---------- A6 : disponibilité ----------
+
+    private const string VoletDormant50 = "Dormant de 50 mm : il faut au moins 60 mm pour un volet roulant.";
+    private const string CroisillonsFeuillete = "Les croisillons sont incompatibles avec le vitrage feuilleté.";
+
+    [Fact]
+    public void Default_configuration_has_every_option_available()
+    {
+        var r = Eval(new());
+
+        Assert.All(r.Options, o => Assert.True(o.Available));
+        Assert.All(r.Options, o => Assert.Empty(o.Reasons));
+    }
+
+    [Fact]
+    public void Unselected_unavailable_option_is_greyed_without_error()
+    {
+        var r = Eval(new() { ["dormant"] = 50 });
+
+        Assert.False(Option(r, "volet").Available);
+        Assert.Contains(VoletDormant50, Option(r, "volet").Reasons);
+        Assert.Empty(r.Errors);
+        Assert.True(r.Valid);
+    }
+
+    [Fact]
+    public void Selected_unavailable_option_is_an_error()
+    {
+        var r = Eval(new() { ["dormant"] = 50, ["volet"] = true });
+
+        Assert.False(r.Valid);
+        Assert.Contains(VoletDormant50, r.Errors);
+    }
+
+    [Fact]
+    public void Auto_added_unavailable_option_is_an_error()
+    {
+        // La motorisation ajoute le volet (A5), mais le dormant de 50 mm l'interdit
+        var r = Eval(new() { ["dormant"] = 50, ["motorisation"] = true });
+
+        Assert.True(Option(r, "volet").AutoAdded);
+        Assert.False(Option(r, "volet").Available);
+        Assert.False(r.Valid);
+        Assert.Contains(VoletDormant50, r.Errors);
+    }
+
+    [Fact]
+    public void Message_is_filled_with_the_current_value()
+    {
+        var r = Eval(new() { ["couleur"] = "chene" });
+
+        Assert.False(Option(r, "croisillons").Available);
+        Assert.Contains("Les croisillons n'existent pas en chene.", Option(r, "croisillons").Reasons);
+    }
+
+    [Fact]
+    public void Both_incompatible_options_selected_is_an_error()
+    {
+        var r = Eval(new() { ["croisillons"] = true, ["feuillete"] = true });
+
+        Assert.False(r.Valid);
+        Assert.Contains(CroisillonsFeuillete, r.Errors);
+    }
+
+    [Fact]
+    public void Selected_option_greys_out_the_incompatible_one()
+    {
+        var r = Eval(new() { ["croisillons"] = true });
+
+        Assert.Empty(r.Errors);
+        Assert.True(Option(r, "croisillons").Available);
+        Assert.False(Option(r, "feuillete").Available);
+        Assert.Contains(CroisillonsFeuillete, Option(r, "feuillete").Reasons);
+    }
+
+    [Fact]
+    public void Incompatibility_works_both_ways()
+    {
+        var r = Eval(new() { ["feuillete"] = true });
+
+        Assert.Empty(r.Errors);
+        Assert.False(Option(r, "croisillons").Available);
+        Assert.Contains(CroisillonsFeuillete, Option(r, "croisillons").Reasons);
+    }
+
+    [Fact]
+    public void Option_can_have_several_reasons()
+    {
+        // Croisillons : pas en chêne (availableIf) ET incompatibles avec le feuilleté
+        var r = Eval(new() { ["couleur"] = "chene", ["feuillete"] = true });
+
+        Assert.Equal(2, Option(r, "croisillons").Reasons.Count);
+        Assert.Empty(r.Errors);   // les croisillons ne sont pas cochés
+    }
 }

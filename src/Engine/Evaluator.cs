@@ -79,8 +79,21 @@ public static class Evaluator
         if (evalRes.Errors.Count > 0)
             return evalRes;
 
+        decimal width = (decimal)values["largeur"];
+        decimal height = (decimal)values["hauteur"];
+
+        int row = Step(p.Grid.Heights, height);
+        int col = Step(p.Grid.Widths, width);
+
+        decimal? basePrice = row >= 0 && col >= 0 ? p.Grid.Prices[row][col] : null;
+
+        if (basePrice == null)
+            evalRes.Errors.Add($"Dimensions {width} × {height} non fabricables.");
+        else
+            evalRes.PriceLines.Add(new PriceLine { Label = "Prix de base", Amount = basePrice.Value });
+
         evalRes.Values = values;
-        evalRes.Valid = true;
+        evalRes.Valid = evalRes.Errors.Count == 0;
         return evalRes;
     }
 
@@ -95,5 +108,16 @@ public static class Evaluator
             ParamType.Option => false,
             _ => null,
         };
+    }
+
+    private static int Step(List<decimal> steps, decimal value)
+    {
+        for (int i = 0; i < steps.Count; i++)
+        {
+            if (value <= steps[i])
+                return i;
+        }
+
+        return -1;
     }
 }

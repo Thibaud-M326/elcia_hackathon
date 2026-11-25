@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Engine;
 
 public static class Evaluator
@@ -132,6 +134,50 @@ public static class Evaluator
         }
 
         return -1;
+    }
+
+    internal static bool Matches(Dictionary<string, object> values, List<Condition> when)
+        => when.All(c => Holds(values, c));
+
+    internal static bool Holds(Dictionary<string, object> values, Condition c)
+    {
+        if (!values.TryGetValue(c.Param, out object? actual))
+            return false;
+
+        ParamType? type = actual switch
+        {
+            decimal => ParamType.Number,
+            string => ParamType.Choice,
+            bool => ParamType.Option,
+            _ => null,
+        };
+
+        if (type == null)
+            return false;
+
+        return c.Op switch
+        {
+            Op.Eq => Equals(actual, Values.Normalize(c.Value, type.Value)),
+            Op.Neq => !Equals(actual, Values.Normalize(c.Value, type.Value)),
+            Op.Gte => actual is decimal a && Values.Normalize(c.Value, type.Value) is decimal b && a >= b,
+            Op.Lte => actual is decimal a && Values.Normalize(c.Value, type.Value) is decimal b && a <= b,
+            Op.In => IsInList(actual, c.Value, type.Value),
+            _ => false,
+        };
+    }
+
+    private static bool IsInList(object actual, JsonElement list, ParamType type)
+    {
+        if (list.ValueKind != JsonValueKind.Array)
+            return false;
+
+        foreach (JsonElement element in list.EnumerateArray())
+        {
+            if (Equals(actual, Values.Normalize(element, type)))
+                return true;
+        }
+
+        return false;
     }
 
     private static decimal Amount(Price price, decimal basePrice, Dictionary<string, object> values)

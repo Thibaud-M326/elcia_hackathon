@@ -93,8 +93,10 @@ public class ValidatorTests
     [InlineData("hauteur")]
     public void Validate_RequiresDimension(string id)
     {
-        AssertInvalid(p => p.Parameters.RemoveAll(parameter => parameter.Id == id),
-            $"Paramètre obligatoire manquant : '{id}'");
+        Product product = ReadSample();
+        product.Parameters.RemoveAll(parameter => parameter.Id == id);
+
+        Assert.Contains($"Paramètre obligatoire manquant : '{id}'.", Validator.Validate(product));
     }
 
     [Fact]
@@ -172,6 +174,49 @@ public class ValidatorTests
             error => Assert.Contains("libellé vide", error),
             error => Assert.Contains("cases attendues", error),
             error => Assert.Contains("ligne 1, colonne 1 : prix négatif", error));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public void Validate_RejectsPercentRatesOutsideBounds(int rate)
+    {
+        AssertInvalid(p => p.Rules[4].Price!.Rate = rate,
+            "Surcharge 'couleur-hors-blanc' : le taux doit être compris entre 0 et 100");
+    }
+
+    [Theory]
+    [InlineData(null, "le prix par unité doit référencer un paramètre")]
+    [InlineData("inconnu", "le paramètre 'inconnu' est introuvable")]
+    [InlineData("couleur", "le paramètre 'couleur' doit être numérique")]
+    public void Validate_RejectsInvalidPerUnitPriceParameter(string? parameterId, string message)
+    {
+        AssertInvalid(p => p.Parameters[5].Price!.Param = parameterId,
+            $"Option 'croisillons' : {message}");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(100)]
+    public void Validate_AcceptsPriceBoundaries(int rate)
+    {
+        Product product = ReadSample();
+        product.Parameters[4].Price!.Amount = 0;
+        product.Rules[4].Price!.Rate = rate;
+
+        Assert.Empty(Validator.Validate(product));
+    }
+
+    [Fact]
+    public void Validate_CollectsOptionAndSurchargePriceErrors()
+    {
+        Product product = ReadSample();
+        product.Parameters[4].Price!.Amount = -1;
+        product.Rules[5].Price!.Amount = -1;
+
+        Assert.Collection(Validator.Validate(product),
+            error => Assert.Contains("Option 'oscillo' : le montant fixe", error),
+            error => Assert.Contains("Surcharge 'grande-largeur' : le montant fixe", error));
     }
 
     private static Product ReadSample() => Json.ReadProduct("product-model-v1.json");

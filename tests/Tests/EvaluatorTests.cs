@@ -469,4 +469,72 @@ public class EvaluatorTests
         Assert.False(r.Valid);
         Assert.Empty(r.PriceLines);
     }
+
+    // ---------- A8 : total et validité (tests de référence, à garder pour toujours) ----------
+
+    [Fact]
+    public void Reference_default_configuration()
+    {
+        var r = Eval(new());
+
+        Assert.True(r.Valid);
+        Assert.Equal(419.00m, r.Total);
+    }
+
+    [Fact]
+    public void Reference_grey_with_motor()
+    {
+        // 419 (base) + 216 (volet ajouté) + 180 (motorisation) + 50,28 (plus-value couleur)
+        var r = Eval(new() { ["couleur"] = "gris", ["motorisation"] = true });
+
+        Assert.True(r.Valid);
+        Assert.Equal(865.28m, r.Total);
+        Assert.True(Option(r, "volet").AutoAdded);
+    }
+
+    [Fact]
+    public void Reference_grey_with_motor_and_thin_frame_is_invalid()
+    {
+        var r = Eval(new() { ["couleur"] = "gris", ["motorisation"] = true, ["dormant"] = 50 });
+
+        Assert.False(r.Valid);
+        Assert.Contains(VoletDormant50, r.Errors);
+    }
+
+    [Fact]
+    public void Reference_not_manufacturable_has_no_total()
+    {
+        var r = Eval(new() { ["largeur"] = 2400, ["hauteur"] = 2100 });
+
+        Assert.False(r.Valid);
+        Assert.Null(r.Total);
+    }
+
+    [Fact]
+    public void Input_error_has_no_total()
+    {
+        var r = Eval(new() { ["largeur"] = 5000 });
+
+        Assert.False(r.Valid);
+        Assert.Null(r.Total);
+    }
+
+    [Fact]
+    public void Total_is_the_sum_of_all_lines()
+    {
+        var r = Eval(new() { ["couleur"] = "gris", ["largeur"] = 1800, ["oscillo"] = true, ["feuillete"] = true });
+
+        decimal sum = 0;
+        foreach (PriceLine line in r.PriceLines)
+            sum += line.Amount;
+
+        Assert.Equal(sum, r.Total);
+    }
+
+    [Fact]
+    public void Version_is_returned_in_every_case()
+    {
+        Assert.Equal(3, Evaluator.Evaluate(P, 3, new Dictionary<string, object?>()).Version);
+        Assert.Equal(3, Evaluator.Evaluate(P, 3, new Dictionary<string, object?> { ["largeur"] = 5000 }).Version);
+    }
 }

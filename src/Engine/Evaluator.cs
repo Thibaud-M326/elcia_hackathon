@@ -116,7 +116,12 @@ public static class Evaluator
 
         AddSurcharges(evalRes, p, values, basePrice.Value);
 
-        evalRes.Valid = evalRes.Errors.Count == 0;
+        decimal total = 0;
+        foreach (PriceLine line in evalRes.PriceLines)
+            total += line.Amount;
+
+        evalRes.Total = total;
+        evalRes.Valid = evalRes.Total != null && evalRes.Errors.Count == 0;
         return evalRes;
     }
 

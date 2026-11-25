@@ -331,6 +331,63 @@ public class ValidatorTests
 
     private static Product ReadSample() => Json.ReadProduct("product-model-v1.json");
 
+    [Fact]
+    public void Validate_RejectsMotorisationWhenIncompatibleWithVolet()
+    {
+        Product product = ReadSample();
+        AddOptionRule(product, RuleType.Incompatible, "volet", "motorisation");
+
+        string error = Assert.Single(Validator.Validate(product));
+        Assert.Contains("L'option 'motorisation' ne peut pas être vendue", error);
+        Assert.Contains("'volet' et 'motorisation'", error);
+    }
+
+    [Fact]
+    public void Validate_RejectsTwoIncompatibleImpliedOptions()
+    {
+        Product product = ReadSample();
+        AddOptionRule(product, RuleType.Implies, "oscillo", "croisillons");
+        AddOptionRule(product, RuleType.Implies, "oscillo", "feuillete");
+
+        string error = Assert.Single(Validator.Validate(product));
+        Assert.Contains("L'option 'oscillo' ne peut pas être vendue", error);
+        Assert.Contains("'croisillons' et 'feuillete'", error);
+    }
+
+    [Fact]
+    public void Validate_FollowsIndirectImplications()
+    {
+        Product product = ReadSample();
+        // Le produit contient déjà motorisation -> volet.
+        AddOptionRule(product, RuleType.Implies, "volet", "oscillo");
+        AddOptionRule(product, RuleType.Incompatible, "motorisation", "oscillo");
+
+        string error = Assert.Single(Validator.Validate(product));
+        Assert.Contains("L'option 'motorisation' ne peut pas être vendue", error);
+        Assert.Contains("'motorisation' et 'oscillo'", error);
+    }
+
+    [Fact]
+    public void Validate_AcceptsImplicationCycleWithoutConflict()
+    {
+        Product product = ReadSample();
+        AddOptionRule(product, RuleType.Implies, "volet", "motorisation");
+
+        Assert.Empty(Validator.Validate(product));
+    }
+
+    private static void AddOptionRule(Product product, RuleType type, string option, string other)
+    {
+        product.Rules.Add(new Rule
+        {
+            Id = $"{type}-{option}-{other}",
+            Type = type,
+            Option = option,
+            Other = other,
+            Message = $"Relation entre {option} et {other}."
+        });
+    }
+
     private static void AssertInvalid(Action<Product> change, string expectedMessage)
     {
         Product product = ReadSample();

@@ -1,0 +1,182 @@
+{
+  "id": "fenetre-pvc-2v",
+  "label": "Fenêtre PVC 2 vantaux",
+  "manufacturer": "Menuiseries Durand",
+  "parameters": [
+    {
+      "id": "largeur",
+      "label": "Largeur (mm)",
+      "type": "number",
+      "min": 600,
+      "max": 2400,
+      "default": 1200
+    },
+    {
+      "id": "hauteur",
+      "label": "Hauteur (mm)",
+      "type": "number",
+      "min": 600,
+      "max": 2100,
+      "default": 1200
+    },
+    {
+      "id": "dormant",
+      "label": "Épaisseur du dormant (mm)",
+      "type": "number",
+      "min": 40,
+      "max": 120,
+      "default": 70
+    },
+    {
+      "id": "couleur",
+      "label": "Couleur",
+      "type": "choice",
+      "choices": ["blanc", "gris", "chene"],
+      "default": "blanc"
+    },
+    {
+      "id": "oscillo",
+      "label": "Oscillo-battant",
+      "type": "option",
+      "default": false,
+      "price": {
+        "type": "fixed",
+        "amount": 55
+      }
+    },
+    {
+      "id": "croisillons",
+      "label": "Croisillons",
+      "type": "option",
+      "default": false,
+      "price": {
+        "type": "perUnit",
+        "rate": 0.05,
+        "param": "largeur"
+      }
+    },
+    {
+      "id": "feuillete",
+      "label": "Vitrage feuilleté",
+      "type": "option",
+      "default": false,
+      "price": {
+        "type": "percent",
+        "rate": 15
+      }
+    },
+    {
+      "id": "volet",
+      "label": "Volet roulant",
+      "type": "option",
+      "default": false,
+      "price": {
+        "type": "perUnit",
+        "rate": 0.18,
+        "param": "largeur"
+      }
+    },
+    {
+      "id": "motorisation",
+      "label": "Motorisation du volet",
+      "type": "option",
+      "default": false,
+      "price": {
+        "type": "fixed",
+        "amount": 180
+      }
+    }
+  ],
+  "grid": {
+    "label": "Prix de base",
+    "widths": [600, 900, 1200, 1500, 1800, 2100, 2400],
+    "heights": [600, 900, 1200, 1500, 1800, 2100],
+    "prices": [
+      [277, 314, 350, 387, 424, 460, 497],
+      [308, 346, 385, 423, 461, 500, 538],
+      [338, 379, 419, 459, 499, 539, 580],
+      [369, 411, 453, 495, 537, 579, 621],
+      [400, 443, 487, 531, 575, 619, 662],
+      [430, 476, 521, 567, 613, 658, null]
+    ]
+  },
+  "rules": [
+    {
+      "id": "volet-dormant",
+      "type": "availableIf",
+      "option": "volet",
+      "when": [
+        {
+          "param": "dormant",
+          "op": "gte",
+          "value": 60
+        }
+      ],
+      "message": "Dormant de {dormant} mm : il faut au moins 60 mm pour un volet roulant."
+    },
+    {
+      "id": "croisillons-couleur",
+      "type": "availableIf",
+      "option": "croisillons",
+      "when": [
+        {
+          "param": "couleur",
+          "op": "in",
+          "value": ["blanc", "gris"]
+        }
+      ],
+      "message": "Les croisillons n'existent pas en {couleur}."
+    },
+    {
+      "id": "croisillons-feuillete",
+      "type": "incompatible",
+      "option": "croisillons",
+      "other": "feuillete",
+      "message": "Les croisillons sont incompatibles avec le vitrage feuilleté."
+    },
+    {
+      "id": "motorisation-volet",
+      "type": "implies",
+      "option": "motorisation",
+      "other": "volet",
+      "message": "La motorisation nécessite un volet roulant."
+    },
+    {
+      "id": "couleur-hors-blanc",
+      "type": "surcharge",
+      "label": "Plus-value couleur",
+      "when": [
+        {
+          "param": "couleur",
+          "op": "neq",
+          "value": "blanc"
+        }
+      ],
+      "price": {
+        "type": "percent",
+        "rate": 12
+      }
+    },
+    {
+      "id": "grande-largeur",
+      "type": "surcharge",
+      "label": "Renfort grande largeur",
+      "when": [
+        {
+          "param": "largeur",
+          "op": "gte",
+          "value": 1800
+        },
+        {
+          "param": "oscillo",
+          "op": "eq",
+          "value": true
+        }
+      ],
+      "price": {
+        "type": "fixed",
+        "amount": 40
+      }
+    }
+  ]
+}

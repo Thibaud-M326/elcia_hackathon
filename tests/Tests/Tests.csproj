@@ -24,4 +24,8 @@
     <ProjectReference Include="..\..\src\Engine\Engine.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\samples\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

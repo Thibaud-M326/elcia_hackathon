@@ -224,4 +224,80 @@ public class EvaluatorTests
         Assert.False(r.Valid);
         Assert.Empty(r.PriceLines);
     }
+
+    // ---------- A5 : cascade implies ----------
+
+    private static OptionState Option(EvaluationResult r, string id)
+        => r.Options.Single(o => o.Id == id);
+
+    private static Rule Implies(string option, string other)
+        => new() { Id = $"{option}-{other}", Type = RuleType.Implies, Option = option, Other = other };
+
+    [Fact]
+    public void Every_option_has_a_state()
+    {
+        var r = Eval(new());
+
+        Assert.Equal(5, r.Options.Count);   // oscillo, croisillons, feuillete, volet, motorisation
+        Assert.All(r.Options, o => Assert.False(o.Selected));
+        Assert.All(r.Options, o => Assert.False(o.AutoAdded));
+        Assert.Equal("Volet roulant", Option(r, "volet").Label);
+    }
+
+    [Fact]
+    public void Motor_adds_the_shutter_automatically()
+    {
+        var r = Eval(new() { ["motorisation"] = true });
+
+        Assert.Empty(r.Errors);
+        Assert.True(Option(r, "volet").Selected);
+        Assert.True(Option(r, "volet").AutoAdded);
+        Assert.Equal(216m, LineAmount(r, "Volet roulant"));        // 0,18 € × 1200 mm
+        Assert.Equal(180m, LineAmount(r, "Motorisation du volet"));
+    }
+
+    [Fact]
+    public void Option_chosen_by_the_salesperson_is_not_auto_added()
+    {
+        var r = Eval(new() { ["volet"] = true });
+
+        Assert.True(Option(r, "volet").Selected);
+        Assert.False(Option(r, "volet").AutoAdded);
+    }
+
+    [Fact]
+    public void Option_chosen_by_the_salesperson_and_implied_is_not_auto_added()
+    {
+        var r = Eval(new() { ["motorisation"] = true, ["volet"] = true });
+
+        Assert.True(Option(r, "volet").Selected);
+        Assert.False(Option(r, "volet").AutoAdded);
+    }
+
+    [Fact]
+    public void Implies_cascades()
+    {
+        // oscillo → motorisation → volet
+        Product product = Json.ReadProduct("product-model-v1.json");
+        product.Rules.Add(Implies("oscillo", "motorisation"));
+
+        var r = Evaluator.Evaluate(product, 1, new Dictionary<string, object?> { ["oscillo"] = true });
+
+        Assert.True(Option(r, "motorisation").AutoAdded);
+        Assert.True(Option(r, "volet").AutoAdded);
+        Assert.False(Option(r, "oscillo").AutoAdded);
+    }
+
+    [Fact]
+    public void Implies_loop_does_not_hang()
+    {
+        // motorisation → volet (déjà dans le produit) et volet → motorisation
+        Product product = Json.ReadProduct("product-model-v1.json");
+        product.Rules.Add(Implies("volet", "motorisation"));
+
+        var r = Evaluator.Evaluate(product, 1, new Dictionary<string, object?> { ["volet"] = true });
+
+        Assert.True(Option(r, "motorisation").Selected);
+        Assert.True(Option(r, "motorisation").AutoAdded);
+    }
 }

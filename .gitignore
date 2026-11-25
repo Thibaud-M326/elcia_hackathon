@@ -484,3 +484,5 @@ $RECYCLE.BIN/
 *.swp
 
 debug/*
+# Consignes locales pour Codex
+/AGENTS.md

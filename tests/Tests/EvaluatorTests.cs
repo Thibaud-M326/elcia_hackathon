@@ -396,4 +396,77 @@ public class EvaluatorTests
         Assert.Empty(r.Errors);   // les croisillons ne sont pas cochés
     }
 
+    // ---------- A7 : surcharges ----------
+
+    private static bool HasLine(EvaluationResult r, string label)
+        => r.PriceLines.Any(l => l.Label == label);
+
+    [Fact]
+    public void Colour_surcharge_is_a_percent_of_the_base_price()
+    {
+        var r = Eval(new() { ["couleur"] = "gris" });   // 12 % de 419 €
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(50.28m, LineAmount(r, "Plus-value couleur"));
+    }
+
+    [Fact]
+    public void Colour_surcharge_follows_the_base_price()
+    {
+        var r = Eval(new() { ["couleur"] = "gris", ["largeur"] = 1500 });   // 12 % de 459 €
+
+        Assert.Equal(55.08m, LineAmount(r, "Plus-value couleur"));
+    }
+
+    [Fact]
+    public void Colour_surcharge_ignores_option_prices()
+    {
+        // 12 % du prix de base (419 €), pas du total avec l'oscillo-battant (474 €)
+        var r = Eval(new() { ["couleur"] = "gris", ["oscillo"] = true });
+
+        Assert.Equal(50.28m, LineAmount(r, "Plus-value couleur"));
+    }
+
+    [Fact]
+    public void White_has_no_colour_surcharge()
+    {
+        var r = Eval(new() { ["couleur"] = "blanc" });
+
+        Assert.False(HasLine(r, "Plus-value couleur"));
+    }
+
+    [Fact]
+    public void Large_window_with_tilt_and_turn_gets_reinforcement()
+    {
+        var r = Eval(new() { ["largeur"] = 1800, ["oscillo"] = true });
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(40m, LineAmount(r, "Renfort grande largeur"));
+    }
+
+    [Fact]
+    public void Large_window_without_tilt_and_turn_has_no_reinforcement()
+    {
+        var r = Eval(new() { ["largeur"] = 1800 });
+
+        Assert.False(HasLine(r, "Renfort grande largeur"));
+    }
+
+    [Fact]
+    public void Several_surcharges_can_apply()
+    {
+        var r = Eval(new() { ["couleur"] = "gris", ["largeur"] = 1800, ["oscillo"] = true });
+
+        Assert.True(HasLine(r, "Plus-value couleur"));
+        Assert.True(HasLine(r, "Renfort grande largeur"));
+    }
+
+    [Fact]
+    public void No_surcharge_line_when_not_manufacturable()
+    {
+        var r = Eval(new() { ["largeur"] = 2400, ["hauteur"] = 2100, ["couleur"] = "gris" });
+
+        Assert.False(r.Valid);
+        Assert.Empty(r.PriceLines);
+    }
 }

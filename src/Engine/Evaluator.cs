@@ -81,6 +81,9 @@ public static class Evaluator
         if (evalRes.Errors.Count > 0)
             return evalRes;
 
+        HashSet<string> autoAdded = Cascade(p, values);
+        AddOptionStates(evalRes, p, values, autoAdded);
+
         decimal width = (decimal)values["largeur"];
         decimal height = (decimal)values["hauteur"];
 
@@ -179,6 +182,54 @@ public static class Evaluator
 
         return false;
     }
+
+    private static HashSet<string> Cascade(Product p, Dictionary<string, object> values)
+    {
+        HashSet<string> autoAdded = new();
+        bool changed = true;
+
+        for (int round = 0; changed && round < 1000; round++)
+        {
+            changed = false;
+
+            foreach (Rule rule in p.Rules)
+            {
+                if (rule.Type != RuleType.Implies)
+                    continue;
+
+                if (IsSelected(values, rule.Option) && !IsSelected(values, rule.Other))
+                {
+                    values[rule.Other!] = true;
+                    autoAdded.Add(rule.Other!);
+                    changed = true;
+                }
+            }
+        }
+
+        return autoAdded;
+    }
+
+    private static void AddOptionStates(EvaluationResult evalRes, Product p,
+        Dictionary<string, object> values, HashSet<string> autoAdded)
+    {
+        foreach (Parameter param in p.Parameters)
+        {
+            if (param.Type != ParamType.Option)
+                continue;
+
+            evalRes.Options.Add(new OptionState
+            {
+                Id = param.Id,
+                Label = param.Label,
+                Selected = IsSelected(values, param.Id),
+                AutoAdded = autoAdded.Contains(param.Id),
+                Available = true,
+            });
+        }
+    }
+
+    private static bool IsSelected(Dictionary<string, object> values, string? id)
+        => id != null && values.TryGetValue(id, out object? value) && value is true;
 
     private static decimal Amount(Price price, decimal basePrice, Dictionary<string, object> values)
     {

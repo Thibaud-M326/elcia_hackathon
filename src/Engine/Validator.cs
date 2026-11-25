@@ -49,7 +49,62 @@ public static class Validator
         ValidateGrid(p.Grid, errors);
 
         ValidateRules(p, ids, errors);
+        ValidateOptionCompatibility(p, errors);
         return errors;
+    }
+
+    private static void ValidateOptionCompatibility(Product product, List<string> errors)
+    {
+        Dictionary<string, List<string>> implications = new(StringComparer.Ordinal);
+        foreach (Parameter parameter in product.Parameters)
+        {
+            if (parameter.Type == ParamType.Option && !string.IsNullOrWhiteSpace(parameter.Id))
+                implications.TryAdd(parameter.Id, new List<string>());
+        }
+
+        List<(string first, string second)> incompatiblePairs = new();
+        foreach (Rule rule in product.Rules)
+        {
+            if (rule.Option == null || rule.Other == null || rule.Option == rule.Other)
+                continue;
+            if (!implications.ContainsKey(rule.Option) || !implications.ContainsKey(rule.Other))
+                continue;
+
+            if (rule.Type == RuleType.Implies)
+                implications[rule.Option].Add(rule.Other);
+            else if (rule.Type == RuleType.Incompatible)
+                incompatiblePairs.Add((rule.Option, rule.Other));
+        }
+
+        foreach (string startingOption in implications.Keys)
+        {
+            HashSet<string> selected = FindImpliedOptions(startingOption, implications);
+            foreach (var pair in incompatiblePairs)
+            {
+                if (selected.Contains(pair.first) && selected.Contains(pair.second))
+                    errors.Add($"L'option '{startingOption}' ne peut pas être vendue : les options '{pair.first}' et '{pair.second}' seraient sélectionnées ensemble et sont incompatibles.");
+            }
+        }
+    }
+
+    private static HashSet<string> FindImpliedOptions(string startingOption, Dictionary<string, List<string>> implications)
+    {
+        HashSet<string> selected = new(StringComparer.Ordinal);
+        Queue<string> pending = new();
+        selected.Add(startingOption);
+        pending.Enqueue(startingOption);
+
+        while (pending.Count > 0)
+        {
+            string current = pending.Dequeue();
+            foreach (string impliedOption in implications[current])
+            {
+                if (selected.Add(impliedOption))
+                    pending.Enqueue(impliedOption);
+            }
+        }
+
+        return selected;
     }
 
     private static void ValidateRules(Product product, HashSet<string> parameterIds, List<string> errors)

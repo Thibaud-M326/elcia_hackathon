@@ -114,6 +114,8 @@ public static class Evaluator
             evalRes.PriceLines.Add(new PriceLine { Label = option.Label, Amount = amount });
         }
 
+        AddSurcharges(evalRes, p, values, basePrice.Value);
+
         evalRes.Valid = evalRes.Errors.Count == 0;
         return evalRes;
     }
@@ -273,6 +275,19 @@ public static class Evaluator
                 MakeUnavailable(second, message);
             else if (second.Selected)
                 MakeUnavailable(first, message);
+        }
+    }
+
+    private static void AddSurcharges(EvaluationResult evalRes, Product p,
+        Dictionary<string, object> values, decimal basePrice)
+    {
+        foreach (Rule rule in p.Rules)
+        {
+            if (rule.Type != RuleType.Surcharge || rule.Price == null || !Matches(values, rule.When))
+                continue;
+
+            decimal amount = Amount(rule.Price, basePrice, values);
+            evalRes.PriceLines.Add(new PriceLine { Label = rule.Label ?? "", Amount = amount });
         }
     }
 

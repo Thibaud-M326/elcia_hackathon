@@ -33,6 +33,9 @@ public static class Validator
                 case ParamType.Choice:
                     ValidateChoice(parameter, context, errors);
                     break;
+                case ParamType.Option:
+                    ValidatePrice(parameter.Price, p.Parameters, $"Option '{parameter.Id}'", errors);
+                    break;
             }
         }
 
@@ -43,7 +46,52 @@ public static class Validator
         }
 
         ValidateGrid(p.Grid, errors);
+
+        foreach (Rule rule in p.Rules)
+        {
+            if (rule.Type == RuleType.Surcharge)
+                ValidatePrice(rule.Price, p.Parameters, $"Surcharge '{rule.Id}'", errors);
+        }
+
         return errors;
+    }
+
+    private static void ValidatePrice(Price? price, List<Parameter> parameters, string context, List<string> errors)
+    {
+        if (price == null)
+            return;
+
+        switch (price.Type)
+        {
+            case PriceType.Fixed:
+                if (price.Amount < 0)
+                    errors.Add($"{context} : le montant fixe doit être positif ou nul.");
+                break;
+
+            case PriceType.Percent:
+                if (price.Rate < 0 || price.Rate > 100)
+                    errors.Add($"{context} : le taux doit être compris entre 0 et 100.");
+                break;
+
+            case PriceType.PerUnit:
+                ValidatePriceParameter(price.Param, parameters, context, errors);
+                break;
+        }
+    }
+
+    private static void ValidatePriceParameter(string? parameterId, List<Parameter> parameters, string context, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(parameterId))
+        {
+            errors.Add($"{context} : le prix par unité doit référencer un paramètre.");
+            return;
+        }
+
+        Parameter? parameter = parameters.Find(item => item.Id == parameterId);
+        if (parameter == null)
+            errors.Add($"{context} : le paramètre '{parameterId}' est introuvable.");
+        else if (parameter.Type != ParamType.Number)
+            errors.Add($"{context} : le paramètre '{parameterId}' doit être numérique.");
     }
 
     private static void ValidateGrid(Grid grid, List<string> errors)

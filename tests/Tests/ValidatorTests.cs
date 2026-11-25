@@ -109,6 +109,71 @@ public class ValidatorTests
             error => Assert.Contains("choix en double", error));
     }
 
+    [Theory]
+    [InlineData(true, "largeur")]
+    [InlineData(false, "hauteur")]
+    public void Validate_RejectsEmptyTiers(bool useWidths, string dimension)
+    {
+        Product product = ReadSample();
+        if (useWidths)
+            product.Grid.Widths.Clear();
+        else
+            product.Grid.Heights.Clear();
+
+        Assert.Contains(Validator.Validate(product),
+            error => error.Contains($"au moins un palier de {dimension}"));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Validate_RejectsTiersThatDoNotIncrease(int difference)
+    {
+        AssertInvalid(p => p.Grid.Widths[1] = p.Grid.Widths[0] + difference,
+            "palier de largeur 2");
+        AssertInvalid(p => p.Grid.Heights[1] = p.Grid.Heights[0] + difference,
+            "palier de hauteur 2");
+    }
+
+    [Fact]
+    public void Validate_RejectsWrongPriceRowCount()
+    {
+        AssertInvalid(p => p.Grid.Prices.RemoveAt(0), "lignes de prix attendues");
+        AssertInvalid(p => p.Grid.Prices.Add(new List<decimal?>(p.Grid.Prices[0])),
+            "lignes de prix attendues");
+    }
+
+    [Fact]
+    public void Validate_RejectsWrongPriceColumnCount()
+    {
+        AssertInvalid(p => p.Grid.Prices[0].RemoveAt(0), "Grille, ligne 1");
+        AssertInvalid(p => p.Grid.Prices[0].Add(0), "Grille, ligne 1");
+    }
+
+    [Fact]
+    public void Validate_AcceptsZeroAndMissingPrices()
+    {
+        Product product = ReadSample();
+        product.Grid.Prices[0][0] = 0;
+        product.Grid.Prices[0][1] = null;
+
+        Assert.Empty(Validator.Validate(product));
+    }
+
+    [Fact]
+    public void Validate_CollectsParameterAndGridErrors()
+    {
+        Product product = ReadSample();
+        product.Parameters[0].Label = "";
+        product.Grid.Prices[0].RemoveAt(0);
+        product.Grid.Prices[0][0] = -1;
+
+        Assert.Collection(Validator.Validate(product),
+            error => Assert.Contains("libellé vide", error),
+            error => Assert.Contains("cases attendues", error),
+            error => Assert.Contains("ligne 1, colonne 1 : prix négatif", error));
+    }
+
     private static Product ReadSample() => Json.ReadProduct("product-model-v1.json");
 
     private static void AssertInvalid(Action<Product> change, string expectedMessage)

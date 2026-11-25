@@ -395,4 +395,5 @@ public class EvaluatorTests
         Assert.Equal(2, Option(r, "croisillons").Reasons.Count);
         Assert.Empty(r.Errors);   // les croisillons ne sont pas cochés
     }
+
 }

@@ -95,4 +95,65 @@ public class EvaluatorTests
 
         Assert.Equal(2, r.Errors.Count);
     }
+
+    // ---------- Test de prix ------------
+
+    private static decimal BasePrice(EvaluationResult r)
+        => r.PriceLines.Single(l => l.Label == "Prix de base").Amount;
+
+    [Fact]
+    public void Base_price_on_exact_steps()
+    {
+        var r = Eval(new() { ["largeur"] = 1200, ["hauteur"] = 1200 });
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(419m, BasePrice(r));
+    }
+
+    [Fact]
+    public void Base_price_uses_next_step_up()
+    {
+        var r = Eval(new() { ["largeur"] = 1100, ["hauteur"] = 1000 });
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(419m, BasePrice(r));
+    }
+
+    [Fact]
+    public void Base_price_on_first_step()
+    {
+        var r = Eval(new() { ["largeur"] = 600, ["hauteur"] = 600 });
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(277m, BasePrice(r));
+    }
+
+    [Fact]
+    public void Empty_grid_cell_is_not_manufacturable()
+    {
+        var r = Eval(new() { ["largeur"] = 2400, ["hauteur"] = 2100 });
+
+        Assert.False(r.Valid);
+        Assert.Null(r.Total);
+        Assert.Contains("Dimensions 2400 × 2100 non fabricables.", r.Errors);
+        Assert.Empty(r.PriceLines);
+    }
+
+    [Fact]
+    public void Empty_cell_in_the_middle_is_not_manufacturable()
+    {
+        // Copie fraîche du produit : on ne modifie pas P, partagé par les autres tests
+        Product product = Json.ReadProduct("product-model-v1.json");
+        product.Grid.Prices[2][3] = null;   // hauteur 1200, largeur 1500
+
+        var exact = Evaluator.Evaluate(product, 1,
+            new Dictionary<string, object?> { ["largeur"] = 1500, ["hauteur"] = 1200 });
+        var nextStep = Evaluator.Evaluate(product, 1,
+            new Dictionary<string, object?> { ["largeur"] = 1400, ["hauteur"] = 1100 });
+
+        Assert.False(exact.Valid);
+        Assert.Contains("Dimensions 1500 × 1200 non fabricables.", exact.Errors);
+        Assert.False(nextStep.Valid);
+        Assert.Contains("Dimensions 1400 × 1100 non fabricables.", nextStep.Errors);
+    }
 }

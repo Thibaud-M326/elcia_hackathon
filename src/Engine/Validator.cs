@@ -42,7 +42,48 @@ public static class Validator
                 errors.Add($"Paramètre obligatoire manquant : '{requiredId}'.");
         }
 
+        ValidateGrid(p.Grid, errors);
         return errors;
+    }
+
+    private static void ValidateGrid(Grid grid, List<string> errors)
+    {
+        ValidateTiers(grid.Widths, "largeur", errors);
+        ValidateTiers(grid.Heights, "hauteur", errors);
+
+        int expectedRows = grid.Heights.Count;
+        if (grid.Prices.Count != expectedRows)
+            errors.Add($"Grille : {expectedRows} lignes de prix attendues, {grid.Prices.Count} trouvées.");
+
+        int expectedColumns = grid.Widths.Count;
+        for (int rowIndex = 0; rowIndex < grid.Prices.Count; rowIndex++)
+        {
+            List<decimal?> row = grid.Prices[rowIndex];
+            int rowNumber = rowIndex + 1;
+            if (row.Count != expectedColumns)
+                errors.Add($"Grille, ligne {rowNumber} : {expectedColumns} cases attendues, {row.Count} trouvées.");
+
+            for (int columnIndex = 0; columnIndex < row.Count; columnIndex++)
+            {
+                decimal? price = row[columnIndex];
+                if (price < 0)
+                    errors.Add($"Grille, ligne {rowNumber}, colonne {columnIndex + 1} : prix négatif.");
+            }
+        }
+    }
+
+    private static void ValidateTiers(List<decimal> tiers, string dimension, List<string> errors)
+    {
+        if (tiers.Count == 0)
+            errors.Add($"Grille : au moins un palier de {dimension} est requis.");
+
+        for (int index = 1; index < tiers.Count; index++)
+        {
+            decimal previousTier = tiers[index - 1];
+            decimal currentTier = tiers[index];
+            if (currentTier <= previousTier)
+                errors.Add($"Grille : le palier de {dimension} {index + 1} doit être supérieur au précédent.");
+        }
     }
 
     private static void ValidateNumber(Parameter parameter, string context, List<string> errors)

@@ -1,0 +1,42 @@
+.button {
+	min-height: 44px;
+	padding: 0 22px;
+	border: 2px solid var(--action);
+	border-radius: var(--radius-button);
+	font-size: 16px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.primary {
+	background: var(--action);
+	color: var(--white);
+}
+
+.primary:hover:not(:disabled) {
+	background: var(--action-hover);
+	border-color: var(--action-hover);
+}
+
+.secondary {
+	background: var(--white);
+	color: var(--action);
+}
+
+.secondary:hover:not(:disabled) {
+	color: var(--action-hover);
+	border-color: var(--action-hover);
+}
+
+.danger {
+	background: var(--white);
+	border-color: var(--error);
+	color: var(--error);
+}
+
+.button:disabled {
+	background: var(--border);
+	border-color: var(--border);
+	color: var(--muted);
+	cursor: not-allowed;
+}

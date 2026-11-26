@@ -1,0 +1,47 @@
+import Badge from '@/components/Badge';
+import styles from '@/components/OptionItem.module.css';
+
+interface OptionItemProps {
+	id: string;
+	label: string;
+	checked: boolean;
+	available: boolean;
+	autoAdded: boolean;
+	reasons: string[];
+	amount?: string;
+	onChange: (checked: boolean) => void;
+}
+
+export default function OptionItem({ id, label, checked, available, autoAdded, reasons, amount, onChange }: OptionItemProps) {
+	const disabled = autoAdded || (!available && !checked);
+	const reasonsId = `${id}-reasons`;
+
+	return (
+		<li className={`${styles.item}${available ? '' : ` ${styles.unavailable}`}`}>
+			<div className={styles.row}>
+				<input
+					id={id}
+					type="checkbox"
+					className={styles.checkbox}
+					checked={checked}
+					disabled={disabled}
+					aria-describedby={reasons.length > 0 ? reasonsId : undefined}
+					onChange={(e) => onChange(e.target.checked)}
+				/>
+				<label htmlFor={id} className={styles.label}>
+					{label}
+				</label>
+				{autoAdded && <Badge tone="info">Auto</Badge>}
+				{!available && <Badge tone="warning">Indisponible</Badge>}
+				{amount && <span className={styles.amount}>{amount}</span>}
+			</div>
+			{reasons.length > 0 && (
+				<ul id={reasonsId} className={styles.reasons}>
+					{reasons.map((reason) => (
+						<li key={reason}>{reason}</li>
+					))}
+				</ul>
+			)}
+		</li>
+	);
+}

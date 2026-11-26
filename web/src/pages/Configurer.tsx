@@ -4,6 +4,7 @@ import type { ParamType, Parameter, Product, Rule } from '@/api';
 import AppLayout from '@/components/AppLayout';
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
+import JsonSection from '@/editor/JsonSection';
 import ParameterSheet from '@/editor/ParameterSheet';
 import RulesSection from '@/editor/RulesSection';
 import { REQUIRED_IDS, TYPE_EXAMPLES, TYPE_LABELS, newParameter, parameterProblems, usagesOf } from '@/editor/model';
@@ -15,7 +16,9 @@ const NAV = navFor('configurer');
 const TYPES: ParamType[] = ['number', 'choice', 'option'];
 
 type Selection = number | 'new' | null;
-type Tab = 'parameters' | 'rules';
+type Tab = 'parameters' | 'rules' | 'json';
+
+const TAB_LABELS: Record<Tab, string> = { parameters: 'Paramètres', rules: 'Règles', json: 'JSON' };
 type Busy = 'save' | 'publish' | null;
 type Notice = { tone: 'success' | 'error'; text: string; errors?: string[] } | null;
 
@@ -33,15 +36,20 @@ export default function Configurer({ productId }: { productId: string }) {
 	const [tab, setTab] = useState<Tab>('parameters');
 	const [busy, setBusy] = useState<Busy>(null);
 	const [notice, setNotice] = useState<Notice>(null);
+	// Texte JSON modifié mais pas encore appliqué (onglet JSON)
+	const [jsonPending, setJsonPending] = useState(false);
+	// Incrémenté par Annuler : recrée l'onglet JSON avec le brouillon remis à zéro
+	const [revision, setRevision] = useState(0);
 
 	const dirty = product !== null && JSON.stringify(product) !== JSON.stringify(saved);
+	const unsaved = dirty || jsonPending;
 
 	useEffect(() => {
-		if (!dirty) return;
+		if (!unsaved) return;
 		const warn = (e: BeforeUnloadEvent) => e.preventDefault();
 		window.addEventListener('beforeunload', warn);
 		return () => window.removeEventListener('beforeunload', warn);
-	}, [dirty]);
+	}, [unsaved]);
 
 	useEffect(() => {
 		getDraft(productId)
@@ -116,8 +124,15 @@ export default function Configurer({ productId }: { productId: string }) {
 	function cancel() {
 		if (!saved || !window.confirm('Annuler toutes les modifications non enregistrées ?')) return;
 		setProduct(saved);
+		setRevision((r) => r + 1);
 		setSelection((s) => (typeof s === 'number' && s < saved.parameters.length ? s : saved.parameters.length > 0 ? 0 : null));
 		setNotice(null);
+	}
+
+	function changeTab(next: Tab) {
+		if (next === tab) return;
+		if (tab === 'json' && jsonPending && !window.confirm("Le texte JSON modifié n'a pas été appliqué. Le perdre ?")) return;
+		setTab(next);
 	}
 
 	function setParameters(next: Parameter[]) {
@@ -153,9 +168,9 @@ export default function Configurer({ productId }: { productId: string }) {
 	return (
 		<AppLayout
 			title="Configurer"
-			breadcrumb={`Produits / ${product.label} / ${tab === 'rules' ? 'Règles' : 'Paramètres'}`}
+			breadcrumb={`Produits / ${product.label} / ${TAB_LABELS[tab]}`}
 			nav={NAV}
-			confirmLeave={() => !dirty || window.confirm('Quitter sans enregistrer ? Les modifications non enregistrées seront perdues.')}
+			confirmLeave={() => !unsaved || window.confirm('Quitter sans enregistrer ? Les modifications non enregistrées seront perdues.')}
 		>
 			<div className={styles.header}>
 				<div>
@@ -199,6 +214,7 @@ export default function Configurer({ productId }: { productId: string }) {
 					[
 						['parameters', `Paramètres (${parameters.length})`, count(problems)],
 						['rules', `Règles (${rules.length})`, count(rulesProblems)],
+						['json', 'JSON', 0],
 					] as const
 				).map(([key, label, invalid]) => (
 					<button
@@ -207,7 +223,7 @@ export default function Configurer({ productId }: { productId: string }) {
 						role="tab"
 						aria-selected={tab === key}
 						className={`${styles.tab}${tab === key ? ` ${styles.tabActive}` : ''}`}
-						onClick={() => setTab(key)}
+						onClick={() => changeTab(key)}
 					>
 						{label}
 						{invalid > 0 && <Badge tone="error">{invalid} à corriger</Badge>}
@@ -215,7 +231,9 @@ export default function Configurer({ productId }: { productId: string }) {
 				))}
 			</div>
 
-			{tab === 'rules' ? (
+			{tab === 'json' ? (
+				<JsonSection key={revision} product={product} onApply={setProduct} onPendingChange={setJsonPending} />
+			) : tab === 'rules' ? (
 				<RulesSection product={product} problems={rulesProblems} onChange={setRules} />
 			) : (
 				<div className={styles.grid}>

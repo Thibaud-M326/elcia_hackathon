@@ -1,181 +1,332 @@
 {
-  "id": "fenetre-pvc-2v",
-  "label": "Fenêtre PVC 2 vantaux",
-  "manufacturer": "Menuiseries Durand",
-  "parameters": [
+  "Id": "fenetre-pvc-1v",
+  "Label": "Fen\u00EAtre PVC 1 Vantail",
+  "Manufacturer": "Usine 42",
+  "Parameters": [
     {
-      "id": "largeur",
-      "label": "Largeur (mm)",
-      "type": "number",
-      "min": 600,
-      "max": 2400,
-      "default": 1200
+      "Id": "largeur",
+      "Label": "Largeur (mm)",
+      "Type": "number",
+      "Min": 600,
+      "Max": 2400,
+      "Choices": null,
+      "Default": 1200,
+      "Price": null
     },
     {
-      "id": "hauteur",
-      "label": "Hauteur (mm)",
-      "type": "number",
-      "min": 600,
-      "max": 2100,
-      "default": 1200
+      "Id": "hauteur",
+      "Label": "Hauteur (mm)",
+      "Type": "number",
+      "Min": 600,
+      "Max": 2100,
+      "Choices": null,
+      "Default": 1200,
+      "Price": null
     },
     {
-      "id": "dormant",
-      "label": "Épaisseur du dormant (mm)",
-      "type": "number",
-      "min": 40,
-      "max": 120,
-      "default": 70
+      "Id": "couleur",
+      "Label": "Couleur",
+      "Type": "choice",
+      "Min": null,
+      "Max": null,
+      "Choices": [
+        "blanc",
+        "gris",
+        "chene"
+      ],
+      "Default": "blanc",
+      "Price": null
     },
     {
-      "id": "couleur",
-      "label": "Couleur",
-      "type": "choice",
-      "choices": ["blanc", "gris", "chene"],
-      "default": "blanc"
-    },
-    {
-      "id": "oscillo",
-      "label": "Oscillo-battant",
-      "type": "option",
-      "default": false,
-      "price": {
-        "type": "fixed",
-        "amount": 55
+      "Id": "oscillo",
+      "Label": "Oscillo-battant",
+      "Type": "option",
+      "Min": null,
+      "Max": null,
+      "Choices": null,
+      "Default": false,
+      "Price": {
+        "Type": "fixed",
+        "Amount": 55,
+        "Rate": 0,
+        "Param": null
       }
     },
     {
-      "id": "croisillons",
-      "label": "Croisillons",
-      "type": "option",
-      "default": false,
-      "price": {
-        "type": "perUnit",
-        "rate": 0.05,
-        "param": "largeur"
+      "Id": "feuillete",
+      "Label": "Vitrage feuillet\u00E9",
+      "Type": "option",
+      "Min": null,
+      "Max": null,
+      "Choices": null,
+      "Default": false,
+      "Price": {
+        "Type": "percent",
+        "Amount": 0,
+        "Rate": 15,
+        "Param": null
       }
     },
     {
-      "id": "feuillete",
-      "label": "Vitrage feuilleté",
-      "type": "option",
-      "default": false,
-      "price": {
-        "type": "percent",
-        "rate": 15
+      "Id": "volet",
+      "Label": "Volet roulant",
+      "Type": "option",
+      "Min": null,
+      "Max": null,
+      "Choices": null,
+      "Default": false,
+      "Price": {
+        "Type": "perUnit",
+        "Amount": 0,
+        "Rate": 0.18,
+        "Param": "largeur"
       }
     },
     {
-      "id": "volet",
-      "label": "Volet roulant",
-      "type": "option",
-      "default": false,
-      "price": {
-        "type": "perUnit",
-        "rate": 0.18,
-        "param": "largeur"
+      "Id": "motorisation",
+      "Label": "Motorisation du volet",
+      "Type": "option",
+      "Min": null,
+      "Max": null,
+      "Choices": null,
+      "Default": false,
+      "Price": {
+        "Type": "fixed",
+        "Amount": 180,
+        "Rate": 0,
+        "Param": null
       }
     },
     {
-      "id": "motorisation",
-      "label": "Motorisation du volet",
-      "type": "option",
-      "default": false,
-      "price": {
-        "type": "fixed",
-        "amount": 180
-      }
+      "Id": "dormant",
+      "Label": "\u00C9paisseur du dormant (mm)",
+      "Type": "choice",
+      "Min": null,
+      "Max": null,
+      "Choices": [
+        "Dormant de 60mm",
+        "Dormant de 100mm",
+        "Dormant de 120mm",
+        "Dormant de 140mm",
+        "Dormant de 160mm",
+        "Dormant de 180mm",
+        "Dormant de 200mm"
+      ],
+      "Default": "Dormant de 60mm",
+      "Price": null
+    },
+    {
+      "Id": "poignee",
+      "Label": "Poign\u00E9es",
+      "Type": "choice",
+      "Min": null,
+      "Max": null,
+      "Choices": [
+        "Poign\u00E9e en titane",
+        "Poign\u00E9e en laiton",
+        "Poign\u00E9e moderne inox"
+      ],
+      "Default": "Poign\u00E9e en titane",
+      "Price": null
     }
   ],
-  "grid": {
-    "label": "Prix de base",
-    "widths": [600, 900, 1200, 1500, 1800, 2100, 2400],
-    "heights": [600, 900, 1200, 1500, 1800, 2100],
-    "prices": [
-      [277, 314, 350, 387, 424, 460, 497],
-      [308, 346, 385, 423, 461, 500, 538],
-      [338, 379, 419, 459, 499, 539, 580],
-      [369, 411, 453, 495, 537, 579, 621],
-      [400, 443, 487, 531, 575, 619, 662],
-      [430, 476, 521, 567, 613, 658, null]
+  "Grid": {
+    "Label": "Prix de base",
+    "Widths": [
+      600,
+      900,
+      1200,
+      1500,
+      1800,
+      2100,
+      2400
+    ],
+    "Heights": [
+      600,
+      900,
+      1200,
+      1500,
+      1800,
+      2100
+    ],
+    "Prices": [
+      [
+        277,
+        314,
+        350,
+        387,
+        424,
+        460,
+        497
+      ],
+      [
+        308,
+        346,
+        385,
+        423,
+        461,
+        500,
+        538
+      ],
+      [
+        338,
+        379,
+        419,
+        459,
+        499,
+        539,
+        580
+      ],
+      [
+        369,
+        411,
+        453,
+        495,
+        537,
+        579,
+        621
+      ],
+      [
+        400,
+        443,
+        487,
+        531,
+        575,
+        619,
+        662
+      ],
+      [
+        430,
+        476,
+        521,
+        567,
+        613,
+        658,
+        null
+      ]
     ]
   },
-  "rules": [
+  "Rules": [
     {
-      "id": "volet-dormant",
-      "type": "availableIf",
-      "option": "volet",
-      "when": [
+      "Id": "volet-dormant",
+      "Type": "availableIf",
+      "Option": "volet",
+      "Other": null,
+      "When": [
         {
-          "param": "dormant",
-          "op": "gte",
-          "value": 60
+          "Param": "dormant",
+          "Op": "in",
+          "Value": [
+            "Dormant de 120mm",
+            "Dormant de 100mm",
+            "Dormant de 140mm",
+            "Dormant de 160mm",
+            "Dormant de 180mm",
+            "Dormant de 200mm"
+          ]
         }
       ],
-      "message": "Dormant de {dormant} mm : il faut au moins 60 mm pour un volet roulant."
+      "Message": "Le dormant doit \u00EAtre d\u0027au moins 100mm (actuel: {dormant})",
+      "Label": null,
+      "Price": null
     },
     {
-      "id": "croisillons-couleur",
-      "type": "availableIf",
-      "option": "croisillons",
-      "when": [
+      "Id": "motorisation-volet",
+      "Type": "implies",
+      "Option": "motorisation",
+      "Other": "volet",
+      "When": [],
+      "Message": "La motorisation n\u00E9cessite un volet roulant.",
+      "Label": null,
+      "Price": null
+    },
+    {
+      "Id": "couleur-hors-blanc",
+      "Type": "surcharge",
+      "Option": null,
+      "Other": null,
+      "When": [
         {
-          "param": "couleur",
-          "op": "in",
-          "value": ["blanc", "gris"]
+          "Param": "couleur",
+          "Op": "neq",
+          "Value": "blanc"
         }
       ],
-      "message": "Les croisillons n'existent pas en {couleur}."
-    },
-    {
-      "id": "croisillons-feuillete",
-      "type": "incompatible",
-      "option": "croisillons",
-      "other": "feuillete",
-      "message": "Les croisillons sont incompatibles avec le vitrage feuilleté."
-    },
-    {
-      "id": "motorisation-volet",
-      "type": "implies",
-      "option": "motorisation",
-      "other": "volet",
-      "message": "La motorisation nécessite un volet roulant."
-    },
-    {
-      "id": "couleur-hors-blanc",
-      "type": "surcharge",
-      "label": "Plus-value couleur",
-      "when": [
-        {
-          "param": "couleur",
-          "op": "neq",
-          "value": "blanc"
-        }
-      ],
-      "price": {
-        "type": "percent",
-        "rate": 12
+      "Message": null,
+      "Label": "Plus-value couleur",
+      "Price": {
+        "Type": "percent",
+        "Amount": 0,
+        "Rate": 12,
+        "Param": null
       }
     },
     {
-      "id": "grande-largeur",
-      "type": "surcharge",
-      "label": "Renfort grande largeur",
-      "when": [
+      "Id": "grande-largeur",
+      "Type": "surcharge",
+      "Option": null,
+      "Other": null,
+      "When": [
         {
-          "param": "largeur",
-          "op": "gte",
-          "value": 1800
+          "Param": "largeur",
+          "Op": "gte",
+          "Value": 1800
         },
         {
-          "param": "oscillo",
-          "op": "eq",
-          "value": true
+          "Param": "oscillo",
+          "Op": "eq",
+          "Value": true
         }
       ],
-      "price": {
-        "type": "fixed",
-        "amount": 40
+      "Message": null,
+      "Label": "Renfort grande largeur",
+      "Price": {
+        "Type": "fixed",
+        "Amount": 40,
+        "Rate": 0,
+        "Param": null
+      }
+    },
+    {
+      "Id": "plus-value",
+      "Type": "surcharge",
+      "Option": null,
+      "Other": null,
+      "When": [
+        {
+          "Param": "poignee",
+          "Op": "eq",
+          "Value": "Poign\u00E9e en laiton"
+        }
+      ],
+      "Message": null,
+      "Label": "Plus value poign\u00E9e en laiton",
+      "Price": {
+        "Type": "fixed",
+        "Amount": 15,
+        "Rate": 0,
+        "Param": null
+      }
+    },
+    {
+      "Id": "plus-value-2",
+      "Type": "surcharge",
+      "Option": null,
+      "Other": null,
+      "When": [
+        {
+          "Param": "poignee",
+          "Op": "eq",
+          "Value": "Poign\u00E9e moderne inox"
+        }
+      ],
+      "Message": null,
+      "Label": "Plus value poign\u00E9e moderne inox",
+      "Price": {
+        "Type": "fixed",
+        "Amount": 50,
+        "Rate": 0,
+        "Param": null
       }
     }
   ]

@@ -5,7 +5,37 @@ namespace Tests;
 public class ProductStoreTests : IDisposable
 {
     private const string SampleId = "fenetre-pvc-2v";
-    private readonly string dataDir = Directory.CreateTempSubdirectory("elcia-store-").FullName;
+    private readonly string testDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+    private readonly string dataDir;
+
+    public ProductStoreTests()
+    {
+        dataDir = Path.Combine(testDirectory, "data");
+        Directory.CreateDirectory(dataDir);
+    }
+
+    [Fact]
+    public void PublishingTwicePreservesFirstVersionFile()
+    {
+        ProductStore store = new(dataDir);
+        Product product = store.GetDraft(SampleId)!;
+        product.Id = "fenetre-test";
+        product.Label = "Première version";
+        store.SaveDraft(product);
+        Assert.Empty(store.Publish(product.Id));
+
+        string directory = Path.Combine(dataDir, product.Id);
+        string firstPath = Path.Combine(directory, "v1.json");
+        byte[] originalBytes = File.ReadAllBytes(firstPath);
+
+        product.Label = "Deuxième version";
+        store.SaveDraft(product);
+        Assert.Empty(store.Publish(product.Id));
+
+        Assert.Equal(originalBytes, File.ReadAllBytes(firstPath));
+        string secondPath = Path.Combine(directory, "v2.json");
+        Assert.Equal("Deuxième version", Json.ReadProduct(secondPath).Label);
+    }
 
     [Fact]
     public void EmptyStoreImportsSampleAndRestoresVersionsAndDraft()
@@ -33,13 +63,17 @@ public class ProductStoreTests : IDisposable
     {
         ProductStore store = new(dataDir);
         Product draft = store.GetDraft(SampleId)!;
+        string publishedLabel = draft.Label;
+        draft.Label = "Brouillon invalide";
         draft.Parameters[0].Label = "";
         draft.Parameters[1].Label = "";
         store.SaveDraft(draft);
 
         Assert.Equal(2, store.Publish(SampleId).Count);
         Assert.Null(store.Get(SampleId, 2));
-        Assert.False(File.Exists(Path.Combine(dataDir, SampleId, "v2.json")));
+        string directory = Path.Combine(dataDir, SampleId);
+        Assert.Equal(Path.Combine(directory, "v1.json"), Assert.Single(Directory.GetFiles(directory, "v*.json")));
+        Assert.Equal(publishedLabel, store.Get(SampleId)!.Label);
         Assert.Equal(1, Assert.Single(store.List()).PublishedVersion);
 
         store.SaveDraft(store.Get(SampleId)!);
@@ -107,7 +141,7 @@ public class ProductStoreTests : IDisposable
     }
 
     [Theory]
-    [InlineData("../hors-dossier")]
+    [InlineData("../pirate")]
     [InlineData("a/b")]
     [InlineData("a\\b")]
     [InlineData("a..b")]
@@ -121,10 +155,11 @@ public class ProductStoreTests : IDisposable
         Assert.Throws<ArgumentException>(() => store.Publish(id));
         Assert.Throws<ArgumentException>(() => store.GetDraft(id));
         Assert.Throws<ArgumentException>(() => store.Get(id));
+        Assert.False(Directory.Exists(Path.Combine(testDirectory, "pirate")));
     }
 
     public void Dispose()
     {
-        Directory.Delete(dataDir, recursive: true);
+        Directory.Delete(testDirectory, recursive: true);
     }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { API_URL, evaluate, getPublished } from '@/api';
 import type { Configuration, EvaluationResult, Product, Value } from '@/api';
-import { formatEuros } from '@/format';
+import { formatEuros, formatOptionPrice } from '@/format';
 import Accordion from '@/components/Accordion';
 import AppLayout from '@/components/AppLayout';
 import Button from '@/components/Button';
@@ -145,6 +145,10 @@ export default function Simulation({ productId }: { productId: string }) {
 							{options.map((param) => {
 								const state = result?.options.find((o) => o.id === param.id);
 								const amount = lineAmount(param.label);
+								let priceLabel = formatOptionPrice(param.price, product.parameters);
+								if (param.price && state?.selected && amount !== undefined) {
+									priceLabel = formatEuros(amount);
+								}
 								return (
 									<OptionItem
 										key={param.id}
@@ -154,7 +158,7 @@ export default function Simulation({ productId }: { productId: string }) {
 										available={state?.available ?? true}
 										autoAdded={state?.autoAdded ?? false}
 										reasons={state?.reasons ?? []}
-										amount={amount !== undefined ? formatEuros(amount) : undefined}
+										amount={priceLabel}
 										onChange={(checked) => setValue(param.id, checked)}
 									/>
 								);

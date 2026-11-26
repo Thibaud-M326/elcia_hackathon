@@ -26,6 +26,11 @@ export interface Price {
 	param: string | null;
 }
 
+export type Price =
+	| { type: 'fixed'; amount: number }
+	| { type: 'percent'; rate: number }
+	| { type: 'perUnit'; rate: number; param: string };
+
 export interface Parameter {
 	id: string;
 	label: string;

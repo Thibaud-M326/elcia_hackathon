@@ -15,6 +15,10 @@ interface OptionItemProps {
 export default function OptionItem({ id, label, checked, available, autoAdded, reasons, amount, onChange }: OptionItemProps) {
 	const disabled = autoAdded || (!available && !checked);
 	const reasonsId = `${id}-reasons`;
+	const amountId = `${id}-amount`;
+	const descriptions: string[] = [];
+	if (amount) descriptions.push(amountId);
+	if (reasons.length > 0) descriptions.push(reasonsId);
 
 	return (
 		<li className={`${styles.item}${available ? '' : ` ${styles.unavailable}`}`}>
@@ -25,7 +29,7 @@ export default function OptionItem({ id, label, checked, available, autoAdded, r
 					className={styles.checkbox}
 					checked={checked}
 					disabled={disabled}
-					aria-describedby={reasons.length > 0 ? reasonsId : undefined}
+					aria-describedby={descriptions.join(' ') || undefined}
 					onChange={(e) => onChange(e.target.checked)}
 				/>
 				<label htmlFor={id} className={styles.label}>
@@ -33,7 +37,7 @@ export default function OptionItem({ id, label, checked, available, autoAdded, r
 				</label>
 				{autoAdded && <Badge tone="info">Auto</Badge>}
 				{!available && <Badge tone="warning">Indisponible</Badge>}
-				{amount && <span className={styles.amount}>{amount}</span>}
+				{amount && <span id={amountId} className={styles.amount}>{amount}</span>}
 			</div>
 			{reasons.length > 0 && (
 				<ul id={reasonsId} className={styles.reasons}>

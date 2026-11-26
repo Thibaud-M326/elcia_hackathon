@@ -1,0 +1,78 @@
+.grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 340px;
+	gap: 24px;
+	align-items: start;
+	max-width: 1200px;
+}
+
+.card {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 32px;
+	border-radius: var(--radius-field);
+	background: var(--white);
+}
+
+.productHeader {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin-bottom: 8px;
+}
+
+.productTitle {
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.manufacturer {
+	margin-top: 4px;
+	font-size: 15px;
+	color: var(--muted);
+}
+
+.fields {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px 24px;
+}
+
+.options {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* Le total ne quitte jamais l'écran */
+.side {
+	position: sticky;
+	top: 24px;
+}
+
+.loading {
+	color: var(--muted);
+}
+
+/* Sous 900 px : le panneau de prix s'empile sous la saisie */
+@media (max-width: 900px) {
+	.grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.side {
+		position: static;
+	}
+
+	.card {
+		padding: 20px 16px;
+	}
+
+	.fields {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

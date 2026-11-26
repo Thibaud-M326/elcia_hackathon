@@ -1,0 +1,53 @@
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+
+.label {
+	font-size: 14px;
+	color: var(--muted);
+}
+
+.control {
+	height: 44px;
+	width: 100%;
+	padding: 0 12px;
+	border: 1px solid var(--field-border);
+	border-radius: var(--radius-field);
+	background: var(--white);
+	color: var(--ink);
+	font-size: 16px;
+}
+
+.control:focus-visible {
+	outline: 2px solid var(--action);
+	outline-offset: 0;
+	border-color: var(--action);
+}
+
+.number {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.select {
+	padding: 0 10px;
+	font-weight: 700;
+}
+
+.invalid {
+	border: 2px solid var(--error);
+}
+
+.hint {
+	font-size: 13px;
+	color: var(--muted);
+}
+
+.error {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--error);
+}

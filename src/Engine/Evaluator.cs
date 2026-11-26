@@ -83,8 +83,8 @@ public static class Evaluator
         if (evalRes.Errors.Count > 0)
             return evalRes;
 
-        HashSet<string> autoAdded = Cascade(p, values);
-        AddOptionStates(evalRes, p, values, autoAdded);
+        Dictionary<string, string> autoAddedBy = Cascade(p, values);
+        AddOptionStates(evalRes, p, values, autoAddedBy);
 
         ApplyAvailableIf(evalRes, p, values);
         ApplyIncompatible(evalRes, p, values);
@@ -193,9 +193,9 @@ public static class Evaluator
         return false;
     }
 
-    private static HashSet<string> Cascade(Product p, Dictionary<string, object> values)
+    private static Dictionary<string, string> Cascade(Product p, Dictionary<string, object> values)
     {
-        HashSet<string> autoAdded = new();
+        Dictionary<string, string> autoAddedBy = new();
         bool changed = true;
 
         for (int round = 0; changed && round < 1000; round++)
@@ -207,32 +207,42 @@ public static class Evaluator
                 if (rule.Type != RuleType.Implies)
                     continue;
 
-                if (IsSelected(values, rule.Option) && !IsSelected(values, rule.Other))
-                {
-                    values[rule.Other!] = true;
-                    autoAdded.Add(rule.Other!);
-                    changed = true;
-                }
+                string? source = rule.Option;
+                string? target = rule.Other;
+                if (source == null || target == null)
+                    continue;
+
+                if (!IsSelected(values, source) || IsSelected(values, target))
+                    continue;
+
+                if (autoAddedBy.TryGetValue(source, out string? originalSource))
+                    source = originalSource;
+
+                values[target] = true;
+                autoAddedBy.Add(target, source);
+                changed = true;
             }
         }
 
-        return autoAdded;
+        return autoAddedBy;
     }
 
     private static void AddOptionStates(EvaluationResult evalRes, Product p,
-        Dictionary<string, object> values, HashSet<string> autoAdded)
+        Dictionary<string, object> values, Dictionary<string, string> autoAddedBy)
     {
         foreach (Parameter param in p.Parameters)
         {
             if (param.Type != ParamType.Option)
                 continue;
 
+            bool wasAutoAdded = autoAddedBy.TryGetValue(param.Id, out string? source);
             evalRes.Options.Add(new OptionState
             {
                 Id = param.Id,
                 Label = param.Label,
                 Selected = IsSelected(values, param.Id),
-                AutoAdded = autoAdded.Contains(param.Id),
+                AutoAdded = wasAutoAdded,
+                AutoAddedBy = source,
                 Available = true,
             });
         }

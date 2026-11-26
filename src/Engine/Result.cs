@@ -24,5 +24,6 @@ public class OptionState
     public bool Selected { get; set; }
     public bool Available { get; set; }
     public bool AutoAdded { get; set; }
+    public string? AutoAddedBy { get; set; }
     public List<string> Reasons { get; set; } = new();
 }

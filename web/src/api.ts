@@ -83,6 +83,7 @@ export interface OptionState {
 	selected: boolean;
 	available: boolean;
 	autoAdded: boolean;
+	autoAddedBy?: string | null;
 	reasons: string[];
 }
 

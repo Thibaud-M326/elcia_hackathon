@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { API_URL, getDraft } from '@/api';
+import { API_URL, ApiError, getDraft, publish, saveDraft } from '@/api';
 import type { ParamType, Parameter, Product, Rule } from '@/api';
 import AppLayout from '@/components/AppLayout';
 import Badge from '@/components/Badge';
@@ -16,6 +16,14 @@ const TYPES: ParamType[] = ['number', 'choice', 'option'];
 
 type Selection = number | 'new' | null;
 type Tab = 'parameters' | 'rules';
+type Busy = 'save' | 'publish' | null;
+type Notice = { tone: 'success' | 'error'; text: string; errors?: string[] } | null;
+
+function errorNotice(e: unknown): Notice {
+	if (e instanceof TypeError) return { tone: 'error', text: `Impossible de joindre l'API (${API_URL}).` };
+	if (e instanceof ApiError && e.errors.length > 0) return { tone: 'error', text: `Erreur HTTP ${e.status}.`, errors: e.errors };
+	return { tone: 'error', text: e instanceof Error ? e.message : String(e) };
+}
 
 export default function Configurer({ productId }: { productId: string }) {
 	const [saved, setSaved] = useState<Product | null>(null);
@@ -23,6 +31,17 @@ export default function Configurer({ productId }: { productId: string }) {
 	const [loadError, setLoadError] = useState<string | null>(null);
 	const [selection, setSelection] = useState<Selection>(null);
 	const [tab, setTab] = useState<Tab>('parameters');
+	const [busy, setBusy] = useState<Busy>(null);
+	const [notice, setNotice] = useState<Notice>(null);
+
+	const dirty = product !== null && JSON.stringify(product) !== JSON.stringify(saved);
+
+	useEffect(() => {
+		if (!dirty) return;
+		const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+		window.addEventListener('beforeunload', warn);
+		return () => window.removeEventListener('beforeunload', warn);
+	}, [dirty]);
 
 	useEffect(() => {
 		getDraft(productId)
@@ -56,7 +75,50 @@ export default function Configurer({ productId }: { productId: string }) {
 	const rules = product.rules ?? [];
 	const rulesProblems = rules.map((r, i) => ruleProblems(r, i, product));
 	const count = (list: string[][]) => list.filter((p) => p.length > 0).length;
-	const dirty = JSON.stringify(product) !== JSON.stringify(saved);
+	const localProblems = count(problems) + count(rulesProblems);
+
+	async function save() {
+		const snapshot = product!;
+		setBusy('save');
+		setNotice(null);
+		try {
+			await saveDraft(snapshot);
+			setSaved(snapshot);
+			setNotice({ tone: 'success', text: 'Brouillon enregistré.' });
+		} catch (e) {
+			setNotice(errorNotice(e));
+		} finally {
+			setBusy(null);
+		}
+	}
+
+	async function publishDraft() {
+		const snapshot = product!;
+		setBusy('publish');
+		setNotice(null);
+		try {
+			if (dirty) {
+				await saveDraft(snapshot);
+				setSaved(snapshot);
+			}
+			const version = await publish(snapshot.id);
+			setNotice({ tone: 'success', text: `Publié en v${version}.` });
+		} catch (e) {
+			if (e instanceof ApiError && e.status === 422) {
+				const n = e.errors.length;
+				setNotice({ tone: 'error', text: `Publication refusée : ${n} erreur${n > 1 ? 's' : ''} à corriger.`, errors: e.errors });
+			} else setNotice(errorNotice(e));
+		} finally {
+			setBusy(null);
+		}
+	}
+
+	function cancel() {
+		if (!saved || !window.confirm('Annuler toutes les modifications non enregistrées ?')) return;
+		setProduct(saved);
+		setSelection((s) => (typeof s === 'number' && s < saved.parameters.length ? s : saved.parameters.length > 0 ? 0 : null));
+		setNotice(null);
+	}
 
 	function setParameters(next: Parameter[]) {
 		setProduct((prev) => (prev ? { ...prev, parameters: next } : prev));
@@ -89,14 +151,48 @@ export default function Configurer({ productId }: { productId: string }) {
 	}
 
 	return (
-		<AppLayout title="Configurer" breadcrumb={`Produits / ${product.label} / ${tab === 'rules' ? 'Règles' : 'Paramètres'}`} nav={NAV}>
+		<AppLayout
+			title="Configurer"
+			breadcrumb={`Produits / ${product.label} / ${tab === 'rules' ? 'Règles' : 'Paramètres'}`}
+			nav={NAV}
+			confirmLeave={() => !dirty || window.confirm('Quitter sans enregistrer ? Les modifications non enregistrées seront perdues.')}
+		>
 			<div className={styles.header}>
 				<div>
 					<h2 className={styles.productTitle}>{product.label}</h2>
 					<p className={styles.muted}>{product.manufacturer}</p>
 				</div>
-				{dirty && <Badge tone="warning">Non enregistré</Badge>}
+				<div className={styles.actions}>
+					{dirty && <Badge tone="warning">Non enregistré</Badge>}
+					{localProblems > 0 && (
+						<span className={styles.reminder}>
+							{localProblems} problème{localProblems > 1 ? 's' : ''} signalé{localProblems > 1 ? 's' : ''} dans l'éditeur
+						</span>
+					)}
+					<Button onClick={cancel} disabled={!dirty || busy !== null}>
+						Annuler les modifications
+					</Button>
+					<Button onClick={save} disabled={!dirty || busy !== null}>
+						{busy === 'save' ? 'Enregistrement...' : 'Enregistrer'}
+					</Button>
+					<Button variant="primary" onClick={publishDraft} disabled={busy !== null}>
+						{busy === 'publish' ? 'Publication...' : 'Publier'}
+					</Button>
+				</div>
 			</div>
+
+			{notice && (
+				<div className={`${styles.notice} ${notice.tone === 'success' ? styles.noticeSuccess : styles.noticeError}`} role={notice.tone === 'error' ? 'alert' : 'status'}>
+					<strong>{notice.text}</strong>
+					{notice.errors && notice.errors.length > 0 && (
+						<ul>
+							{notice.errors.map((err) => (
+								<li key={err}>{err}</li>
+							))}
+						</ul>
+					)}
+				</div>
+			)}
 
 			<div className={styles.tabs} role="tablist" aria-label="Sections du produit">
 				{(

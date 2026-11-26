@@ -27,6 +27,43 @@
 	font-weight: 600;
 }
 
+/* Barre d'actions : Annuler, Enregistrer, Publier */
+.actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.reminder {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--warning-strong);
+}
+
+.notice {
+	max-width: 1200px;
+	margin-bottom: 20px;
+	padding: 14px 18px;
+	border-radius: var(--radius-field);
+	font-size: 15px;
+}
+
+.notice ul {
+	margin: 6px 0 0;
+	padding-left: 20px;
+}
+
+.noticeSuccess {
+	background: var(--success-pale);
+	color: var(--success);
+}
+
+.noticeError {
+	background: var(--error-pale);
+	color: var(--error-strong);
+}
+
 /* Onglets Paramètres / Règles */
 .tabs {
 	display: flex;

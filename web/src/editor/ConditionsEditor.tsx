@@ -10,7 +10,6 @@ interface ConditionsEditorProps {
 	onChange: (conditions: Condition[]) => void;
 }
 
-// Les conditions d'une règle, combinées par ET : [paramètre] [opérateur] [valeur]
 export default function ConditionsEditor({ id, conditions, product, onChange }: ConditionsEditorProps) {
 	const params = product.parameters;
 	const set = (index: number, c: Condition) => onChange(conditions.map((old, i) => (i === index ? c : old)));
@@ -78,7 +77,6 @@ interface ValueInputProps {
 	onChange: (value: Value | Value[]) => void;
 }
 
-// Le champ valeur s'adapte au paramètre : nombre, choix (ou cases pour "est l'un de"), oui / non
 function ValueInput({ id, index, condition, param, onChange }: ValueInputProps) {
 	const label = `Condition ${index + 1} : valeur`;
 	const { value, op } = condition;

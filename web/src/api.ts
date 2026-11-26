@@ -109,13 +109,25 @@ export interface ProductSummary {
 const productPath = (productId: string) => `/products/${encodeURIComponent(productId)}`;
 const versionQuery = (version?: number) => (version === undefined ? '' : `?version=${version}`);
 
+export class ApiError extends Error {
+	readonly status: number;
+	readonly errors: string[];
+
+	constructor(status: number, path: string, errors: string[]) {
+		super(`HTTP ${status} sur ${path}${errors.length > 0 ? ` : ${errors.join(' ')}` : ''}`);
+		this.name = 'ApiError';
+		this.status = status;
+		this.errors = errors;
+	}
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	const res = await fetch(`${API_URL}${path}`, init);
 	if (!res.ok) {
 		const body = await res.json().catch(() => null);
-		const detail = Array.isArray(body?.errors) ? ` : ${body.errors.join(' ')}` : '';
-		throw new Error(`HTTP ${res.status} sur ${path}${detail}`);
+		throw new ApiError(res.status, path, Array.isArray(body?.errors) ? body.errors.map(String) : []);
 	}
+	if (res.status === 204) return undefined as T;
 	return res.json();
 }
 
@@ -125,6 +137,19 @@ export function listProducts(): Promise<ProductSummary[]> {
 
 export function getDraft(productId: string): Promise<Product> {
 	return request(`${productPath(productId)}/draft`);
+}
+
+export function saveDraft(product: Product): Promise<void> {
+	return request(`${productPath(product.id)}/draft`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(product),
+	});
+}
+
+export async function publish(productId: string): Promise<number> {
+	const { version } = await request<{ version: number }>(`${productPath(productId)}/publish`, { method: 'POST' });
+	return version;
 }
 
 export function getPublished(productId: string, version?: number): Promise<Product> {

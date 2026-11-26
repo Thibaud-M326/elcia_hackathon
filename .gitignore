@@ -489,3 +489,6 @@ debug/*
 
 # Donnees de l API (brouillons et versions publiees)
 /data/
+
+# Données de l API de test (make api-bench)
+/.bench/

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { API_URL, evaluate, getPublished } from '@/api';
+import { API_URL, ApiError, evaluate, getPublished } from '@/api';
 import type { Configuration, EvaluationResult, Product, Value } from '@/api';
 import { formatEuros, formatOptionPrice } from '@/format';
 import Accordion from '@/components/Accordion';
@@ -9,11 +9,10 @@ import NumberField from '@/components/NumberField';
 import OptionItem from '@/components/OptionItem';
 import QuotePanel from '@/components/QuotePanel';
 import SelectField from '@/components/SelectField';
-import { navFor } from '@/nav';
+import { hrefFor, navFor } from '@/nav';
 import styles from '@/pages/Simulation.module.css';
 
 const EVALUATION_DELAY_MS = 150;
-const NAV = navFor('simulation');
 
 function errorMessage(e: unknown): string {
 	if (e instanceof TypeError) return `Impossible de joindre l'API (${API_URL}).`;
@@ -35,6 +34,8 @@ export default function Simulation({ productId }: { productId: string }) {
 	const [config, setConfig] = useState<Configuration>({});
 	const [result, setResult] = useState<EvaluationResult | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [notPublished, setNotPublished] = useState(false);
+	const NAV = navFor('simulation', productId);
 
 	useEffect(() => {
 		getPublished(productId)
@@ -42,7 +43,10 @@ export default function Simulation({ productId }: { productId: string }) {
 				setProduct(p);
 				setConfig(initialConfig(p));
 			})
-			.catch((e: unknown) => setError(errorMessage(e)));
+			.catch((e: unknown) => {
+				if (e instanceof ApiError && e.status === 404) setNotPublished(true);
+				else setError(errorMessage(e));
+			});
 	}, [productId]);
 
 	useEffect(() => {
@@ -79,7 +83,12 @@ export default function Simulation({ productId }: { productId: string }) {
 	if (!product) {
 		return (
 			<AppLayout title="Simulation" nav={NAV}>
-				{error ? (
+				{notPublished ? (
+					<p className={styles.error} role="alert">
+						Ce produit n'est pas encore publié : la simulation utilise la dernière version publiée.{' '}
+						<a href={hrefFor('configurer', productId)}>Le configurer et le publier</a>
+					</p>
+				) : error ? (
 					<p className={styles.error} role="alert">
 						{error}
 					</p>

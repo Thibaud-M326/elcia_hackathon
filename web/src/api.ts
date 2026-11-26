@@ -17,6 +17,11 @@ export type Configuration = Record<string, Value>;
 
 export type ParamType = 'number' | 'choice' | 'option';
 
+export type Price =
+	| { type: 'fixed'; amount: number }
+	| { type: 'percent'; rate: number }
+	| { type: 'perUnit'; rate: number; param: string };
+
 export interface Parameter {
 	id: string;
 	label: string;
@@ -25,6 +30,7 @@ export interface Parameter {
 	max?: number;
 	choices?: string[];
 	default?: Value;
+	price?: Price | null;
 }
 
 // Seuls les champs utiles à l'écran Simulation sont typés (pas grid ni rules)

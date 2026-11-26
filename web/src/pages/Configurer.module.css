@@ -1,0 +1,160 @@
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 16px;
+	max-width: 1200px;
+	margin-bottom: 24px;
+}
+
+.productTitle {
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.muted {
+	color: var(--muted);
+	font-size: 15px;
+}
+
+.loadError {
+	padding: 16px;
+	border-radius: var(--radius-field);
+	background: var(--error-pale);
+	color: var(--error-strong);
+	font-weight: 600;
+}
+
+/* Liste à gauche, fiche à droite */
+.grid {
+	display: grid;
+	grid-template-columns: 340px minmax(0, 1fr);
+	gap: 24px;
+	align-items: start;
+	max-width: 1200px;
+}
+
+.card {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 24px;
+	border-radius: var(--radius-field);
+	background: var(--white);
+	min-width: 0;
+}
+
+.listHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.listTitle {
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+	min-height: 44px;
+	padding: 8px 12px;
+	border: 1px solid transparent;
+	border-radius: var(--radius-field);
+	background: none;
+	color: var(--ink);
+	text-align: left;
+	cursor: pointer;
+}
+
+.item:hover {
+	background: var(--page);
+}
+
+.selected,
+.selected:hover {
+	border-color: var(--action);
+	background: var(--action-pale);
+}
+
+.itemText {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.itemLabel {
+	font-weight: 700;
+	overflow-wrap: anywhere;
+}
+
+.itemMeta {
+	font-size: 13px;
+	color: var(--muted);
+	overflow-wrap: anywhere;
+}
+
+.sheetTitle {
+	margin-bottom: 16px;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+/* Choix du type d'un nouveau paramètre */
+.types {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.typeCard {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 16px;
+	border: 2px solid var(--border);
+	border-radius: var(--radius-panel);
+	background: var(--white);
+	color: var(--ink);
+	text-align: left;
+	cursor: pointer;
+}
+
+.typeCard:hover {
+	border-color: var(--action);
+	background: var(--action-pale);
+}
+
+.typeLabel {
+	font-size: 17px;
+	font-weight: 700;
+}
+
+/* Sous 900 px : la fiche passe sous la liste */
+@media (max-width: 900px) {
+	.grid,
+	.types {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.card {
+		padding: 20px 16px;
+	}
+}

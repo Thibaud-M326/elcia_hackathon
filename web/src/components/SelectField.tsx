@@ -5,10 +5,12 @@ interface SelectFieldProps {
 	label: string;
 	value: string;
 	choices: string[];
+	// Texte affiché pour un choix, si différent de sa valeur
+	labelOf?: (choice: string) => string;
 	onChange: (value: string) => void;
 }
 
-export default function SelectField({ id, label, value, choices, onChange }: SelectFieldProps) {
+export default function SelectField({ id, label, value, choices, labelOf, onChange }: SelectFieldProps) {
 	return (
 		<div className={styles.field}>
 			<label htmlFor={id} className={styles.label}>
@@ -22,7 +24,7 @@ export default function SelectField({ id, label, value, choices, onChange }: Sel
 			>
 				{choices.map((choice) => (
 					<option key={choice} value={choice}>
-						{choice}
+						{labelOf ? labelOf(choice) : choice}
 					</option>
 				))}
 			</select>

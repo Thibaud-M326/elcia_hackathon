@@ -12,6 +12,7 @@ import SelectField from '@/components/SelectField';
 import styles from '@/pages/Simulation.module.css';
 
 const NAV = [{ label: 'Simulation', href: '#simulation', active: true }];
+const EVALUATION_DELAY_MS = 150;
 
 function initialConfig(product: Product): Configuration {
 	const config: Configuration = {};
@@ -38,10 +39,14 @@ export default function Simulation({ productId }: { productId: string }) {
 	useEffect(() => {
 		if (!product) return;
 		let cancelled = false;
-		evaluate(productId, config).then((r) => {
-			if (!cancelled) setResult(r);
-		});
+		const timer = window.setTimeout(() => {
+			evaluate(productId, config).then((r) => {
+				if (!cancelled) setResult(r);
+			});
+		}, EVALUATION_DELAY_MS);
+
 		return () => {
+			window.clearTimeout(timer);
 			cancelled = true;
 		};
 	}, [productId, product, config]);

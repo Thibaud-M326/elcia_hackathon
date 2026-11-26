@@ -2,9 +2,6 @@
 // Les types reprennent src/Engine/Model.cs et src/Engine/Result.cs, en camelCase
 // (format JSON par défaut d'ASP.NET).
 
-import productMock from '@/mocks/product-model-v1.json';
-import evaluateMocks from '@/mocks/evaluate-results.json';
-
 // ---------- Valeurs ----------
 
 // Une valeur saisie : nombre (largeur), choix (couleur) ou option cochée (volet)
@@ -14,25 +11,63 @@ export type Value = number | string | boolean;
 export type Configuration = Record<string, Value>;
 
 // ---------- Produit (src/Engine/Model.cs) ----------
+// L'API envoie null pour un champ vide (min d'un choix, prix d'un nombre...).
 
 export type ParamType = 'number' | 'choice' | 'option';
+export type PriceType = 'fixed' | 'percent' | 'perUnit';
+export type RuleType = 'availableIf' | 'incompatible' | 'implies' | 'surcharge';
+export type Op = 'eq' | 'neq' | 'gte' | 'lte' | 'in';
+
+// fixed : amount ; percent : rate % du prix de base ; perUnit : rate x valeur du paramètre param
+export interface Price {
+	type: PriceType;
+	amount: number;
+	rate: number;
+	param: string | null;
+}
 
 export interface Parameter {
 	id: string;
 	label: string;
 	type: ParamType;
-	min?: number;
-	max?: number;
-	choices?: string[];
-	default?: Value;
+	min?: number | null;
+	max?: number | null;
+	choices?: string[] | null;
+	default?: Value | null;
+	price?: Price | null;
 }
 
-// Seuls les champs utiles à l'écran Simulation sont typés (pas grid ni rules)
+export interface Condition {
+	param: string;
+	op: Op;
+	value: Value | Value[];
+}
+
+export interface Rule {
+	id: string;
+	type: RuleType;
+	option?: string | null;
+	other?: string | null;
+	when: Condition[];
+	message?: string | null;
+	label?: string | null;
+	price?: Price | null;
+}
+
+export interface Grid {
+	label: string;
+	widths: number[];
+	heights: number[];
+	prices: (number | null)[][];
+}
+
 export interface Product {
 	id: string;
 	label: string;
 	manufacturer: string;
 	parameters: Parameter[];
+	grid?: Grid;
+	rules?: Rule[];
 }
 
 // ---------- Résultat d'un chiffrage (src/Engine/Result.cs) ----------
@@ -53,7 +88,7 @@ export interface OptionState {
 
 export interface EvaluationResult {
 	valid: boolean;
-	total: number | null; // null seulement si un prix manque (hors grille) ou si une saisie est fausse
+	total: number | null;
 	version: number;
 	priceLines: PriceLine[];
 	options: OptionState[];
@@ -61,33 +96,45 @@ export interface EvaluationResult {
 	values: Configuration;
 }
 
-// ---------- Appels (simulés tant que l'API n'est pas prête) ----------
 
-export async function getProduct(productId: string): Promise<Product> {
-	// TODO API : return (await fetch(`/products/${productId}/draft`)).json();
-	void productId;
-	return productMock as Product;
+export const API_URL = 'http://localhost:5080';
+
+export interface ProductSummary {
+	id: string;
+	label: string;
+	manufacturer: string;
+	publishedVersion: number | null;
 }
 
-type Scenario = keyof typeof evaluateMocks;
+const productPath = (productId: string) => `/products/${encodeURIComponent(productId)}`;
+const versionQuery = (version?: number) => (version === undefined ? '' : `?version=${version}`);
 
-// Le mock ne calcule rien : il renvoie l'un des 4 résultats de référence produits par le vrai
-// moteur (tools/Sandbox). Les autres configurations retombent sur le scénario par défaut.
-function pickScenario(config: Configuration): Scenario {
-	if (config.largeur === 2400 && config.hauteur === 2100) return 'notManufacturable';
-	if (config.motorisation === true && Number(config.dormant ?? 70) < 60) return 'greyMotorThinFrame';
-	if (config.motorisation === true) return 'greyMotor';
-	return 'defaults';
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+	const res = await fetch(`${API_URL}${path}`, init);
+	if (!res.ok) {
+		const body = await res.json().catch(() => null);
+		const detail = Array.isArray(body?.errors) ? ` : ${body.errors.join(' ')}` : '';
+		throw new Error(`HTTP ${res.status} sur ${path}${detail}`);
+	}
+	return res.json();
 }
 
-export async function evaluate(productId: string, config: Configuration): Promise<EvaluationResult> {
-	// TODO API :
-	// const res = await fetch(`/products/${productId}/evaluate`, {
-	//   method: 'POST',
-	//   headers: { 'Content-Type': 'application/json' },
-	//   body: JSON.stringify(config),
-	// });
-	// return res.json();
-	void productId;
-	return evaluateMocks[pickScenario(config)] as EvaluationResult;
+export function listProducts(): Promise<ProductSummary[]> {
+	return request('/products');
+}
+
+export function getDraft(productId: string): Promise<Product> {
+	return request(`${productPath(productId)}/draft`);
+}
+
+export function getPublished(productId: string, version?: number): Promise<Product> {
+	return request(`${productPath(productId)}/published${versionQuery(version)}`);
+}
+
+export function evaluate(productId: string, config: Configuration, version?: number): Promise<EvaluationResult> {
+	return request(`${productPath(productId)}/evaluate${versionQuery(version)}`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(config),
+	});
 }

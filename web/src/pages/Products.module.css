@@ -1,0 +1,126 @@
+.page {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	max-width: 1000px;
+}
+
+.muted {
+	color: var(--muted);
+}
+
+.loadError,
+.formError {
+	padding: 14px 16px;
+	border-radius: var(--radius-field);
+	background: var(--error-pale);
+	color: var(--error-strong);
+	font-weight: 600;
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 16px;
+}
+
+.title {
+	font-size: 24px;
+	font-weight: 700;
+}
+
+.empty {
+	padding: 24px;
+	border-radius: var(--radius-field);
+	background: var(--white);
+	color: var(--muted);
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px 16px;
+	padding: 16px 20px;
+	border-radius: var(--radius-field);
+	background: var(--white);
+}
+
+.rowText {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 200px;
+}
+
+.label {
+	font-size: 17px;
+	font-weight: 700;
+	overflow-wrap: anywhere;
+}
+
+.meta {
+	font-size: 14px;
+	color: var(--muted);
+	overflow-wrap: anywhere;
+}
+
+.rowButtons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+/* Formulaire Nouveau produit */
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 24px;
+	border: 2px solid var(--action);
+	border-radius: var(--radius-field);
+	background: var(--white);
+}
+
+.formTitle {
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.formFields {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px 24px;
+}
+
+.formButtons {
+	display: flex;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+@media (max-width: 900px) {
+	.form {
+		padding: 16px;
+	}
+
+	.formFields {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.rowButtons {
+		width: 100%;
+	}
+}

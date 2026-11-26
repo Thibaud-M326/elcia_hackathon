@@ -7,11 +7,9 @@ import styles from '@/editor/Json.module.css';
 interface JsonSectionProps {
 	product: Product;
 	onApply: (product: Product) => void;
-	// Prévient l'écran quand du texte modifié n'est pas encore appliqué (confirmation en quittant)
 	onPendingChange: (pending: boolean) => void;
 }
 
-// Le brouillon complet en JSON : sert surtout pour la grille de prix, qui n'a pas de formulaire
 export default function JsonSection({ product, onApply, onPendingChange }: JsonSectionProps) {
 	const current = toJson(product);
 	const [text, setText] = useState(current);
@@ -19,7 +17,6 @@ export default function JsonSection({ product, onApply, onPendingChange }: JsonS
 	const pending = text !== current;
 	const gutterRef = useRef<HTMLDivElement>(null);
 	const lineCount = text.split('\n').length;
-	// Le message de JSON.parse donne la ligne de l'erreur : "(line 3 column 11)"
 	const errorLine = Number(errors[0]?.match(/line (\d+)/)?.[1] ?? 0);
 
 	useEffect(() => {
@@ -91,7 +88,6 @@ export default function JsonSection({ product, onApply, onPendingChange }: JsonS
 					autoCorrect="off"
 					onChange={(e) => {
 						setText(e.target.value);
-						// Les erreurs portaient sur l'ancien texte : on les retire dès qu'il change
 						setErrors([]);
 					}}
 					onScroll={(e) => {

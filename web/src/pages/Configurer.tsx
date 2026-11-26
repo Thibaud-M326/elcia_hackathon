@@ -12,7 +12,6 @@ import { ruleProblems } from '@/editor/rules';
 import { navFor } from '@/nav';
 import styles from '@/pages/Configurer.module.css';
 
-const NAV = navFor('configurer');
 const TYPES: ParamType[] = ['number', 'choice', 'option'];
 
 type Selection = number | 'new' | null;
@@ -34,11 +33,10 @@ export default function Configurer({ productId }: { productId: string }) {
 	const [loadError, setLoadError] = useState<string | null>(null);
 	const [selection, setSelection] = useState<Selection>(null);
 	const [tab, setTab] = useState<Tab>('parameters');
+	const NAV = navFor('configurer', productId);
 	const [busy, setBusy] = useState<Busy>(null);
 	const [notice, setNotice] = useState<Notice>(null);
-	// Texte JSON modifié mais pas encore appliqué (onglet JSON)
 	const [jsonPending, setJsonPending] = useState(false);
-	// Incrémenté par Annuler : recrée l'onglet JSON avec le brouillon remis à zéro
 	const [revision, setRevision] = useState(0);
 
 	const dirty = product !== null && JSON.stringify(product) !== JSON.stringify(saved);

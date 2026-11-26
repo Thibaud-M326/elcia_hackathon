@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { API_URL, ApiError, evaluate, getPublished } from '@/api';
+import { API_URL, evaluate, getPublished, listProducts } from '@/api';
 import type { Configuration, EvaluationResult, Product, Value } from '@/api';
 import { formatEuros, formatOptionPrice } from '@/format';
 import Accordion from '@/components/Accordion';
 import AppLayout from '@/components/AppLayout';
+import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import NumberField from '@/components/NumberField';
 import OptionItem from '@/components/OptionItem';
@@ -29,8 +30,24 @@ function initialConfig(product: Product): Configuration {
 	return config;
 }
 
+function keepValues(product: Product, previous: Configuration): Configuration {
+	const config = initialConfig(product);
+	for (const param of product.parameters) {
+		const value = previous[param.id];
+		const fits =
+			(param.type === 'number' && typeof value === 'number') ||
+			(param.type === 'option' && typeof value === 'boolean') ||
+			(param.type === 'choice' && typeof value === 'string' && (param.choices ?? []).includes(value));
+		if (fits) config[param.id] = value;
+	}
+	return config;
+}
+
 export default function Simulation({ productId }: { productId: string }) {
 	const [product, setProduct] = useState<Product | null>(null);
+	const [latest, setLatest] = useState<number | null>(null);
+	const [version, setVersion] = useState<number | null>(null);
+	const [productVersion, setProductVersion] = useState<number | null>(null);
 	const [config, setConfig] = useState<Configuration>({});
 	const [result, setResult] = useState<EvaluationResult | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -38,23 +55,40 @@ export default function Simulation({ productId }: { productId: string }) {
 	const NAV = navFor('simulation', productId);
 
 	useEffect(() => {
-		getPublished(productId)
-			.then((p) => {
-				setProduct(p);
-				setConfig(initialConfig(p));
+		listProducts()
+			.then((list) => {
+				const n = list.find((p) => p.id === productId)?.publishedVersion ?? null;
+				if (n === null) return setNotPublished(true);
+				setLatest(n);
+				setVersion(n);
 			})
-			.catch((e: unknown) => {
-				if (e instanceof ApiError && e.status === 404) setNotPublished(true);
-				else setError(errorMessage(e));
-			});
+			.catch((e: unknown) => setError(errorMessage(e)));
 	}, [productId]);
 
 	useEffect(() => {
-		if (!product) return;
+		if (version === null) return;
+		let cancelled = false;
+		getPublished(productId, version)
+			.then((p) => {
+				if (cancelled) return;
+				setProduct(p);
+				setProductVersion(version);
+				setConfig((prev) => keepValues(p, prev));
+			})
+			.catch((e: unknown) => {
+				if (!cancelled) setError(errorMessage(e));
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [productId, version]);
+
+	useEffect(() => {
+		if (!product || productVersion === null) return;
 		let cancelled = false;
     
 		const timer = window.setTimeout(() => {
-      evaluate(productId, config)
+      evaluate(productId, config, productVersion)
         .then((r) => {
           if (cancelled) return;
           setResult(r);
@@ -69,7 +103,7 @@ export default function Simulation({ productId }: { productId: string }) {
 			window.clearTimeout(timer);
 			cancelled = true;
 		};
-	}, [productId, product, config]);
+	}, [productId, product, productVersion, config]);
 
 	function setValue(id: string, value: Value | undefined) {
 		setConfig((prev) => {
@@ -119,8 +153,25 @@ export default function Simulation({ productId }: { productId: string }) {
 							<h2 className={styles.productTitle}>{product.label}</h2>
 							<p className={styles.manufacturer}>{product.manufacturer}</p>
 						</div>
-						<Button onClick={() => setConfig(initialConfig(product))}>Réinitialiser</Button>
+						<div className={styles.headerActions}>
+							{latest !== null && version !== null && (
+								<SelectField
+									id="simulation-version"
+									label="Version du produit"
+									value={String(version)}
+									choices={Array.from({ length: latest }, (_, i) => String(latest - i))}
+									labelOf={(v) => (Number(v) === latest ? `v${v} (dernière)` : `v${v}`)}
+									onChange={(v) => setVersion(Number(v))}
+								/>
+							)}
+							<Button onClick={() => setConfig(initialConfig(product))}>Réinitialiser</Button>
+						</div>
 					</div>
+					{version !== null && latest !== null && version < latest && (
+						<p className={styles.oldVersion}>
+							<Badge tone="warning">Ancienne version</Badge> Vous simulez la v{version}. La dernière version publiée est la v{latest}.
+						</p>
+					)}
 
 					<Accordion title="Dimensions et finition" defaultOpen>
 						<div className={styles.fields}>

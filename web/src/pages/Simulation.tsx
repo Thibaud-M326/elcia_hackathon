@@ -12,10 +12,11 @@ import SelectField from '@/components/SelectField';
 import { navFor } from '@/nav';
 import styles from '@/pages/Simulation.module.css';
 
+const EVALUATION_DELAY_MS = 150;
 const NAV = navFor('simulation');
 
 function errorMessage(e: unknown): string {
-	if (e instanceof TypeError) return `Impossible de joindre l'API (${API_URL}). Lancez : dotnet run --project src/Api`;
+	if (e instanceof TypeError) return `Impossible de joindre l'API (${API_URL}).`;
 	return e instanceof Error ? e.message : String(e);
 }
 
@@ -47,16 +48,21 @@ export default function Simulation({ productId }: { productId: string }) {
 	useEffect(() => {
 		if (!product) return;
 		let cancelled = false;
-		evaluate(productId, config)
-			.then((r) => {
-				if (cancelled) return;
-				setResult(r);
-				setError(null);
-			})
-			.catch((e: unknown) => {
-				if (!cancelled) setError(errorMessage(e));
-			});
+    
+		const timer = window.setTimeout(() => {
+      evaluate(productId, config)
+        .then((r) => {
+          if (cancelled) return;
+          setResult(r);
+          setError(null);
+        })
+        .catch((e: unknown) => {
+          if (!cancelled) setError(errorMessage(e));
+        });
+		}, EVALUATION_DELAY_MS);
+
 		return () => {
+			window.clearTimeout(timer);
 			cancelled = true;
 		};
 	}, [productId, product, config]);

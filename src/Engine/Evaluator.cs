@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace Engine;
@@ -11,6 +12,7 @@ public static class Evaluator
         Dictionary<string, object> values = new();
 
         evalRes.Version = version;
+        evalRes.Values = values;
 
         foreach (Parameter param in p.Parameters)
         {
@@ -95,11 +97,9 @@ public static class Evaluator
 
         decimal? basePrice = row >= 0 && col >= 0 ? p.Grid.Prices[row][col] : null;
 
-        evalRes.Values = values;
-
         if (basePrice == null)
         {
-            evalRes.Errors.Add($"Dimensions {width} × {height} non fabricables.");
+            evalRes.Errors.Add($"Dimensions {width} x {height} non fabricables.");
             return evalRes;
         }
 
@@ -121,7 +121,7 @@ public static class Evaluator
             total += line.Amount;
 
         evalRes.Total = total;
-        evalRes.Valid = evalRes.Total != null && evalRes.Errors.Count == 0;
+        evalRes.Valid = evalRes.Errors.Count == 0;
         return evalRes;
     }
 
@@ -318,10 +318,17 @@ public static class Evaluator
         string result = message ?? "";
 
         foreach (KeyValuePair<string, object> entry in values)
-            result = result.Replace("{" + entry.Key + "}", entry.Value.ToString());
+            result = result.Replace("{" + entry.Key + "}", Format(entry.Value));
 
         return result;
     }
+
+    private static string Format(object value) => value switch
+    {
+        decimal d => d.ToString("G29", CultureInfo.InvariantCulture),
+        bool b => b ? "oui" : "non",
+        _ => value.ToString() ?? "",
+    };
 
     private static decimal Amount(Price price, decimal basePrice, Dictionary<string, object> values)
     {

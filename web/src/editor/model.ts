@@ -25,7 +25,7 @@ export const PRICE_LABELS: Record<PriceType | 'none', string> = {
 
 export const REQUIRED_IDS = ['largeur', 'hauteur'];
 
-function uniqueId(base: string, taken: string[]): string {
+export function uniqueId(base: string, taken: string[]): string {
 	let id = base;
 	for (let n = 2; taken.includes(id); n++) id = `${base}-${n}`;
 	return id;
@@ -84,7 +84,7 @@ export function parameterProblems(param: Parameter, index: number, all: Paramete
 	return problems;
 }
 
-function priceProblems(price: Price, all: Parameter[]): string[] {
+export function priceProblems(price: Price, all: Parameter[]): string[] {
 	switch (price.type) {
 		case 'fixed':
 			return price.amount < 0 ? ['Le montant doit être positif ou nul.'] : [];

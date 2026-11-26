@@ -5,7 +5,6 @@ interface SelectFieldProps {
 	label: string;
 	value: string;
 	choices: string[];
-	// Texte affiché pour un choix, si différent de sa valeur
 	labelOf?: (choice: string) => string;
 	onChange: (value: string) => void;
 }

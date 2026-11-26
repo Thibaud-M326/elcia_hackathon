@@ -10,7 +10,6 @@ interface ChoicesEditorProps {
 	onChange: (choices: string[], defaultChoice: string | null) => void;
 }
 
-// Liste des choix d'un paramètre "choice" : ajouter, supprimer, choisir le défaut
 export default function ChoicesEditor({ id, choices, defaultChoice, onChange }: ChoicesEditorProps) {
 	const [draft, setDraft] = useState('');
 	const trimmed = draft.trim();

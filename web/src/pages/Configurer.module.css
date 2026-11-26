@@ -27,6 +27,41 @@
 	font-weight: 600;
 }
 
+/* Onglets Paramètres / Règles */
+.tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	max-width: 1200px;
+	margin-bottom: 20px;
+	border-bottom: 2px solid var(--border);
+}
+
+.tab {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 44px;
+	margin-bottom: -2px;
+	padding: 0 18px;
+	border: none;
+	border-bottom: 3px solid transparent;
+	background: none;
+	color: var(--muted);
+	font-size: 16px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.tab:hover {
+	color: var(--ink);
+}
+
+.tabActive {
+	border-bottom-color: var(--action);
+	color: var(--action);
+}
+
 /* Liste à gauche, fiche à droite */
 .grid {
 	display: grid;

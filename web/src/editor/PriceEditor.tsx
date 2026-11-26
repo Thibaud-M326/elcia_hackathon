@@ -9,13 +9,16 @@ interface PriceEditorProps {
 	price: Price | null;
 	parameters: Parameter[];
 	onChange: (price: Price | null) => void;
+	legend?: string;
+	allowFree?: boolean;
 }
 
 type Kind = PriceType | 'none';
 const KINDS: Kind[] = ['none', 'fixed', 'percent', 'perUnit'];
 
-export default function PriceEditor({ id, price, parameters, onChange }: PriceEditorProps) {
+export default function PriceEditor({ id, price, parameters, onChange, legend = "Prix de l'option", allowFree = true }: PriceEditorProps) {
 	const numeric = numericParameters(parameters);
+	const kinds = allowFree ? KINDS : KINDS.filter((k) => k !== 'none');
 
 	function changeKind(kind: Kind) {
 		if (kind === 'none') return onChange(null);
@@ -26,14 +29,14 @@ export default function PriceEditor({ id, price, parameters, onChange }: PriceEd
 
 	return (
 		<fieldset className={styles.fieldset}>
-			<legend className={styles.legend}>Prix de l'option</legend>
+			<legend className={styles.legend}>{legend}</legend>
 
 			<div className={styles.fields}>
 				<SelectField
 					id={`${id}-kind`}
 					label="Type de prix"
 					value={price?.type ?? 'none'}
-					choices={KINDS}
+					choices={kinds}
 					labelOf={(k) => PRICE_LABELS[k as Kind]}
 					onChange={(k) => changeKind(k as Kind)}
 				/>

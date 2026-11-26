@@ -26,11 +26,6 @@ export interface Price {
 	param: string | null;
 }
 
-export type Price =
-	| { type: 'fixed'; amount: number }
-	| { type: 'percent'; rate: number }
-	| { type: 'perUnit'; rate: number; param: string };
-
 export interface Parameter {
 	id: string;
 	label: string;
@@ -102,7 +97,7 @@ export interface EvaluationResult {
 }
 
 
-export const API_URL = 'http://localhost:5080';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5080';
 
 export interface ProductSummary {
 	id: string;

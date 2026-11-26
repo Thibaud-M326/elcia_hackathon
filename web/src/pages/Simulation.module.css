@@ -58,6 +58,16 @@
 	color: var(--muted);
 }
 
+.error {
+	max-width: 1200px;
+	margin-bottom: 16px;
+	padding: 16px;
+	border-radius: var(--radius-field);
+	background: var(--error-pale);
+	color: var(--error-strong);
+	font-weight: 600;
+}
+
 /* Sous 900 px : le panneau de prix s'empile sous la saisie */
 @media (max-width: 900px) {
 	.grid {

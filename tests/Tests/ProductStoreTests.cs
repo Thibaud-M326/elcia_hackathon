@@ -4,7 +4,7 @@ namespace Tests;
 
 public class ProductStoreTests : IDisposable
 {
-    private const string SampleId = "fenetre-pvc-2v";
+    private const string SampleId = "fenetre-pvc-1v";
     private readonly string testDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
     private readonly string dataDir;
 

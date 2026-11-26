@@ -14,13 +14,13 @@ public class ValidatorTests
     [Fact]
     public void Validate_RejectsEmptyId()
     {
-        AssertValidationError(p => p.Parameters[2].Id = "", "identifiant vide");
+        AssertValidationError(p => Param(p, "couleur").Id = "", "identifiant vide");
     }
 
     [Fact]
     public void Validate_RejectsDuplicateId()
     {
-        AssertValidationError(p => p.Parameters[2].Id = "largeur", "identifiant en double");
+        AssertValidationError(p => Param(p, "couleur").Id = "largeur", "identifiant en double");
     }
 
     [Theory]
@@ -28,13 +28,13 @@ public class ValidatorTests
     [InlineData("dormant.interieur")]
     public void Validate_RejectsInvalidIdCharacters(string id)
     {
-        AssertValidationError(p => p.Parameters[2].Id = id, "ni espace ni point");
+        AssertValidationError(p => Param(p, "dormant").Id = id, "ni espace ni point");
     }
 
     [Fact]
     public void Validate_RejectsEmptyLabel()
     {
-        AssertInvalid(p => p.Parameters[2].Label = " ", "libellé vide");
+        AssertInvalid(p => Param(p, "couleur").Label = " ", "libellé vide");
     }
 
     [Fact]
@@ -42,25 +42,25 @@ public class ValidatorTests
     {
         AssertInvalid(p =>
         {
-            Parameter parameter = p.Parameters[2];
-            parameter.Min = 121;
+            Parameter parameter = Param(p, "largeur");
+            parameter.Min = 2401;
             parameter.Default = null;
         }, "min est supérieur à max");
     }
 
     [Theory]
-    [InlineData(39)]
-    [InlineData(121)]
+    [InlineData(599)]
+    [InlineData(2401)]
     public void Validate_RejectsNumberDefaultOutsideBounds(int value)
     {
-        AssertInvalid(p => p.Parameters[2].Default = JsonSerializer.SerializeToElement(value),
+        AssertInvalid(p => Param(p, "largeur").Default = JsonSerializer.SerializeToElement(value),
             "valeur par défaut est hors des bornes");
     }
 
     [Fact]
     public void Validate_RejectsUnrepresentableNumberDefault()
     {
-        AssertInvalid(p => p.Parameters[2].Default = JsonSerializer.SerializeToElement(1e100),
+        AssertInvalid(p => Param(p, "largeur").Default = JsonSerializer.SerializeToElement(1e100),
             "valeur par défaut doit être un nombre décimal");
     }
 
@@ -69,7 +69,7 @@ public class ValidatorTests
     {
         AssertValidationError(p =>
         {
-            Parameter parameter = p.Parameters[3];
+            Parameter parameter = Param(p, "couleur");
             parameter.Choices!.Clear();
             parameter.Default = null;
         }, "au moins un choix est requis");
@@ -78,13 +78,13 @@ public class ValidatorTests
     [Fact]
     public void Validate_RejectsDuplicateChoices()
     {
-        AssertInvalid(p => p.Parameters[3].Choices!.Add("blanc"), "choix en double");
+        AssertInvalid(p => Param(p, "couleur").Choices!.Add("blanc"), "choix en double");
     }
 
     [Fact]
     public void Validate_RejectsUnknownDefaultChoice()
     {
-        AssertInvalid(p => p.Parameters[3].Default = JsonSerializer.SerializeToElement("rouge"),
+        AssertInvalid(p => Param(p, "couleur").Default = JsonSerializer.SerializeToElement("rouge"),
             "valeur par défaut doit figurer parmi les choix");
     }
 
@@ -103,8 +103,8 @@ public class ValidatorTests
     public void Validate_CollectsBothErrors()
     {
         Product product = ReadSample();
-        product.Parameters[2].Label = "";
-        product.Parameters[3].Choices!.Add("blanc");
+        Param(product, "hauteur").Label = "";
+        Param(product, "couleur").Choices!.Add("blanc");
 
         Assert.Collection(Validator.Validate(product),
             error => Assert.Contains("libellé vide", error),
@@ -181,7 +181,7 @@ public class ValidatorTests
     [InlineData(101)]
     public void Validate_RejectsPercentRatesOutsideBounds(int rate)
     {
-        AssertInvalid(p => p.Rules[4].Price!.Rate = rate,
+        AssertInvalid(p => RuleById(p, "couleur-hors-blanc").Price!.Rate = rate,
             "Surcharge 'couleur-hors-blanc' : le taux doit être compris entre 0 et 100");
     }
 
@@ -191,8 +191,8 @@ public class ValidatorTests
     [InlineData("couleur", "le paramètre 'couleur' doit être numérique")]
     public void Validate_RejectsInvalidPerUnitPriceParameter(string? parameterId, string message)
     {
-        AssertInvalid(p => p.Parameters[5].Price!.Param = parameterId,
-            $"Option 'croisillons' : {message}");
+        AssertInvalid(p => Param(p, "volet").Price!.Param = parameterId,
+            $"Option 'volet' : {message}");
     }
 
     [Theory]
@@ -201,8 +201,8 @@ public class ValidatorTests
     public void Validate_AcceptsPriceBoundaries(int rate)
     {
         Product product = ReadSample();
-        product.Parameters[4].Price!.Amount = 0;
-        product.Rules[4].Price!.Rate = rate;
+        Param(product, "oscillo").Price!.Amount = 0;
+        RuleById(product, "couleur-hors-blanc").Price!.Rate = rate;
 
         Assert.Empty(Validator.Validate(product));
     }
@@ -211,8 +211,8 @@ public class ValidatorTests
     public void Validate_CollectsOptionAndSurchargePriceErrors()
     {
         Product product = ReadSample();
-        product.Parameters[4].Price!.Amount = -1;
-        product.Rules[5].Price!.Amount = -1;
+        Param(product, "oscillo").Price!.Amount = -1;
+        RuleById(product, "grande-largeur").Price!.Amount = -1;
 
         Assert.Collection(Validator.Validate(product),
             error => Assert.Contains("Option 'oscillo' : le montant fixe", error),
@@ -235,7 +235,7 @@ public class ValidatorTests
     public void Validate_ChecksBothOptionReferences()
     {
         Product product = ReadSample();
-        Rule rule = product.Rules[2];
+        Rule rule = RuleById(product, "motorisation-volet");
         rule.Option = "inconnue";
         rule.Other = "largeur";
 
@@ -247,18 +247,20 @@ public class ValidatorTests
     [Fact]
     public void Validate_RejectsRuleThatReferencesItself()
     {
-        AssertInvalid(p => p.Rules[3].Other = "motorisation", "ne peut pas porter sur elle-même");
+        AssertInvalid(p => RuleById(p, "motorisation-volet").Other = "motorisation", "ne peut pas porter sur elle-même");
     }
 
     [Fact]
     public void Validate_ReportsMissingRequiredRuleFields()
     {
         Product product = ReadSample();
-        product.Rules[0].When.Clear();
-        product.Rules[0].Message = " ";
-        product.Rules[4].When.Clear();
-        product.Rules[4].Label = null;
-        product.Rules[4].Price = null;
+        Rule availability = RuleById(product, "volet-dormant");
+        availability.When.Clear();
+        availability.Message = " ";
+        Rule surcharge = RuleById(product, "couleur-hors-blanc");
+        surcharge.When.Clear();
+        surcharge.Label = null;
+        surcharge.Price = null;
 
         Assert.Collection(Validator.Validate(product),
             error => Assert.Contains("au moins une condition", error),
@@ -272,8 +274,8 @@ public class ValidatorTests
     public void Validate_ReportsUnknownConditionAndMessageParameters()
     {
         Product product = ReadSample();
-        product.Rules[0].When[0].Param = "inconnu";
-        product.Rules[3].Message = "Option {volet} avec {inconnue}.";
+        RuleById(product, "volet-dormant").When[0].Param = "inconnu";
+        RuleById(product, "motorisation-volet").Message = "Option {volet} avec {inconnue}.";
 
         Assert.Collection(Validator.Validate(product),
             error => Assert.Contains("condition 1 : paramètre 'inconnu' introuvable", error),
@@ -285,15 +287,16 @@ public class ValidatorTests
     [InlineData(Op.Lte)]
     public void Validate_RejectsNumericComparisonsOnChoices(Op operation)
     {
-        AssertInvalid(p => p.Rules[4].When[0].Op = operation, "exigent un paramètre numérique");
+        AssertInvalid(p => RuleById(p, "couleur-hors-blanc").When[0].Op = operation, "exigent un paramètre numérique");
     }
 
     [Fact]
     public void Validate_RejectsNonNumericAndNonBooleanConditionValues()
     {
         Product product = ReadSample();
-        product.Rules[0].When[0].Value = JsonSerializer.SerializeToElement("60");
-        product.Rules[5].When[1].Value = JsonSerializer.SerializeToElement("true");
+        Rule rule = RuleById(product, "grande-largeur");
+        rule.When[0].Value = JsonSerializer.SerializeToElement("1800");
+        rule.When[1].Value = JsonSerializer.SerializeToElement("true");
 
         Assert.Collection(Validator.Validate(product),
             error => Assert.Contains("la valeur doit être un nombre décimal", error),
@@ -302,10 +305,10 @@ public class ValidatorTests
 
     [Theory]
     [InlineData("[]")]
-    [InlineData("\"blanc\"")]
+    [InlineData("\"Dormant de 100mm\"")]
     public void Validate_RequiresNonEmptyListForIn(string json)
     {
-        AssertInvalid(p => p.Rules[1].When[0].Value = JsonSerializer.Deserialize<JsonElement>(json),
+        AssertInvalid(p => RuleById(p, "volet-dormant").When[0].Value = JsonSerializer.Deserialize<JsonElement>(json),
             "in exige une liste non vide");
     }
 
@@ -313,8 +316,8 @@ public class ValidatorTests
     public void Validate_ChecksEachChoiceInList()
     {
         Product product = ReadSample();
-        product.Rules[1].When[0].Value =
-            JsonSerializer.Deserialize<JsonElement>("[\"blanc\", \"chêne\", 42]");
+        RuleById(product, "volet-dormant").When[0].Value =
+            JsonSerializer.Deserialize<JsonElement>("[\"Dormant de 100mm\", \"chêne\", 42]");
 
         Assert.Collection(Validator.Validate(product),
             error => Assert.Contains("élément 2 : le choix 'chêne'", error),
@@ -331,6 +334,11 @@ public class ValidatorTests
 
     private static Product ReadSample() => Json.ReadProduct("product-model-v1.json");
 
+    // Par identifiant plutôt que par position : les tests ne cassent pas si l'ordre du produit change
+    private static Parameter Param(Product product, string id) => product.Parameters.Single(p => p.Id == id);
+
+    private static Rule RuleById(Product product, string id) => product.Rules.Single(r => r.Id == id);
+
     [Fact]
     public void Validate_RejectsMotorisationWhenIncompatibleWithVolet()
     {
@@ -346,12 +354,14 @@ public class ValidatorTests
     public void Validate_RejectsTwoIncompatibleImpliedOptions()
     {
         Product product = ReadSample();
-        AddOptionRule(product, RuleType.Implies, "oscillo", "croisillons");
+        // Le produit n'a pas d'incompatibilité : on en ajoute une entre volet et feuilleté
+        AddOptionRule(product, RuleType.Incompatible, "volet", "feuillete");
+        AddOptionRule(product, RuleType.Implies, "oscillo", "volet");
         AddOptionRule(product, RuleType.Implies, "oscillo", "feuillete");
 
         string error = Assert.Single(Validator.Validate(product));
         Assert.Contains("L'option 'oscillo' ne peut pas être vendue", error);
-        Assert.Contains("'croisillons' et 'feuillete'", error);
+        Assert.Contains("'volet' et 'feuillete'", error);
     }
 
     [Fact]

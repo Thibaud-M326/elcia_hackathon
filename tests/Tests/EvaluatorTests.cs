@@ -11,6 +11,22 @@ public class EvaluatorTests
     private static EvaluationResult Eval(Dictionary<string, object?> input)
         => Evaluator.Evaluate(P, 1, input);
 
+    // Le dormant est une liste de choix ; le volet n'est possible qu'à partir de 100 mm,
+    // et le dormant par défaut fait 60 mm : par défaut, le volet est indisponible.
+    private const string Dormant60 = "Dormant de 60mm";
+    private const string Dormant100 = "Dormant de 100mm";
+
+    // Produit de référence + une règle ajoutée pour le test (fonctionnalité absente du produit)
+    private static Product With(params Rule[] rules)
+    {
+        Product product = Json.ReadProduct("product-model-v1.json");
+        product.Rules.AddRange(rules);
+        return product;
+    }
+
+    private static EvaluationResult Eval(Product product, Dictionary<string, object?> input)
+        => Evaluator.Evaluate(product, 1, input);
+
     [Fact]
     public void Empty_input_is_valid_and_uses_defaults()
     {
@@ -21,17 +37,20 @@ public class EvaluatorTests
         Assert.Equal(1200m, r.Values["largeur"]);
         Assert.Equal(1200m, r.Values["hauteur"]);
         Assert.Equal("blanc", r.Values["couleur"]);
+        Assert.Equal(Dormant60, r.Values["dormant"]);
+        Assert.Equal("Poignée en titane", r.Values["poignee"]);
         Assert.Equal(false, r.Values["volet"]);
     }
 
     [Fact]
     public void Input_value_replaces_default()
     {
-        var r = Eval(new() { ["largeur"] = 1500, ["volet"] = true });
+        var r = Eval(new() { ["largeur"] = 1500, ["volet"] = true, ["dormant"] = Dormant100 });
 
         Assert.Empty(r.Errors);
         Assert.Equal(1500m, r.Values["largeur"]);
         Assert.Equal(true, r.Values["volet"]);
+        Assert.Equal(Dormant100, r.Values["dormant"]);
     }
 
     [Fact]
@@ -183,16 +202,16 @@ public class EvaluatorTests
     [Fact]
     public void Per_unit_price_option_uses_another_parameter()
     {
-        var r = Eval(new() { ["croisillons"] = true });   // 0,05 € × 1200 mm
+        var r = Eval(new() { ["volet"] = true, ["dormant"] = Dormant100 });   // 0,18 € × 1200 mm
 
         Assert.Empty(r.Errors);
-        Assert.Equal(60m, LineAmount(r, "Croisillons"));
+        Assert.Equal(216m, LineAmount(r, "Volet roulant"));
     }
 
     [Fact]
     public void Per_unit_price_follows_the_parameter_value()
     {
-        var r = Eval(new() { ["volet"] = true, ["largeur"] = 1500 });   // 0,18 € × 1500 mm
+        var r = Eval(new() { ["volet"] = true, ["dormant"] = Dormant100, ["largeur"] = 1500 });   // 0,18 € × 1500 mm
 
         Assert.Empty(r.Errors);
         Assert.Equal(270m, LineAmount(r, "Volet roulant"));
@@ -239,7 +258,7 @@ public class EvaluatorTests
     {
         var r = Eval(new());
 
-        Assert.Equal(5, r.Options.Count);   // oscillo, croisillons, feuillete, volet, motorisation
+        Assert.Equal(4, r.Options.Count);   // oscillo, feuillete, volet, motorisation
         Assert.All(r.Options, o => Assert.False(o.Selected));
         Assert.All(r.Options, o => Assert.False(o.AutoAdded));
         Assert.All(r.Options, o => Assert.Null(o.AutoAddedBy));
@@ -249,7 +268,7 @@ public class EvaluatorTests
     [Fact]
     public void Motor_adds_the_shutter_automatically()
     {
-        var r = Eval(new() { ["motorisation"] = true });
+        var r = Eval(new() { ["motorisation"] = true, ["dormant"] = Dormant100 });
 
         Assert.Empty(r.Errors);
         Assert.True(Option(r, "volet").Selected);
@@ -262,7 +281,7 @@ public class EvaluatorTests
     [Fact]
     public void Option_chosen_by_the_salesperson_is_not_auto_added()
     {
-        var r = Eval(new() { ["volet"] = true });
+        var r = Eval(new() { ["volet"] = true, ["dormant"] = Dormant100 });
 
         Assert.True(Option(r, "volet").Selected);
         Assert.False(Option(r, "volet").AutoAdded);
@@ -272,7 +291,7 @@ public class EvaluatorTests
     [Fact]
     public void Option_chosen_by_the_salesperson_and_implied_is_not_auto_added()
     {
-        var r = Eval(new() { ["motorisation"] = true, ["volet"] = true });
+        var r = Eval(new() { ["motorisation"] = true, ["volet"] = true, ["dormant"] = Dormant100 });
 
         Assert.True(Option(r, "volet").Selected);
         Assert.False(Option(r, "volet").AutoAdded);
@@ -283,10 +302,7 @@ public class EvaluatorTests
     public void Implies_cascades()
     {
         // oscillo → motorisation → volet
-        Product product = Json.ReadProduct("product-model-v1.json");
-        product.Rules.Add(Implies("oscillo", "motorisation"));
-
-        var r = Evaluator.Evaluate(product, 1, new Dictionary<string, object?> { ["oscillo"] = true });
+        var r = Eval(With(Implies("oscillo", "motorisation")), new() { ["oscillo"] = true });
 
         Assert.True(Option(r, "motorisation").AutoAdded);
         Assert.True(Option(r, "volet").AutoAdded);
@@ -299,10 +315,7 @@ public class EvaluatorTests
     public void Implies_loop_does_not_hang()
     {
         // motorisation → volet (déjà dans le produit) et volet → motorisation
-        Product product = Json.ReadProduct("product-model-v1.json");
-        product.Rules.Add(Implies("volet", "motorisation"));
-
-        var r = Evaluator.Evaluate(product, 1, new Dictionary<string, object?> { ["volet"] = true });
+        var r = Eval(With(Implies("volet", "motorisation")), new() { ["volet"] = true });
 
         Assert.True(Option(r, "motorisation").Selected);
         Assert.True(Option(r, "motorisation").AutoAdded);
@@ -310,13 +323,36 @@ public class EvaluatorTests
 
     // ---------- A6 : disponibilité ----------
 
-    private const string VoletDormant50 = "Dormant de 50 mm : il faut au moins 60 mm pour un volet roulant.";
-    private const string CroisillonsFeuillete = "Les croisillons sont incompatibles avec le vitrage feuilleté.";
+    private const string VoletDormant60 = "Le dormant doit être d'au moins 100mm (actuel: Dormant de 60mm)";
+    private const string OscilloFeuillete = "L'oscillo-battant est incompatible avec le vitrage feuilleté.";
+
+    // Le produit n'a pas d'incompatibilité : on en ajoute une pour tester le moteur
+    private static readonly Product WithIncompatibility = With(new Rule
+    {
+        Id = "oscillo-feuillete",
+        Type = RuleType.Incompatible,
+        Option = "oscillo",
+        Other = "feuillete",
+        Message = OscilloFeuillete,
+    });
 
     [Fact]
-    public void Default_configuration_has_every_option_available()
+    public void Default_frame_makes_only_the_shutter_unavailable()
     {
         var r = Eval(new());
+
+        Assert.False(Option(r, "volet").Available);
+        Assert.Equal(VoletDormant60, Assert.Single(Option(r, "volet").Reasons));
+        Assert.All(r.Options.Where(o => o.Id != "volet"), o => Assert.True(o.Available));
+        Assert.All(r.Options.Where(o => o.Id != "volet"), o => Assert.Empty(o.Reasons));
+    }
+
+    [Theory]
+    [InlineData("Dormant de 100mm")]
+    [InlineData("Dormant de 200mm")]
+    public void Thick_frame_makes_every_option_available(string dormant)
+    {
+        var r = Eval(new() { ["dormant"] = dormant });
 
         Assert.All(r.Options, o => Assert.True(o.Available));
         Assert.All(r.Options, o => Assert.Empty(o.Reasons));
@@ -325,10 +361,9 @@ public class EvaluatorTests
     [Fact]
     public void Unselected_unavailable_option_is_greyed_without_error()
     {
-        var r = Eval(new() { ["dormant"] = 50 });
+        var r = Eval(new());
 
         Assert.False(Option(r, "volet").Available);
-        Assert.Contains(VoletDormant50, Option(r, "volet").Reasons);
         Assert.Empty(r.Errors);
         Assert.True(r.Valid);
     }
@@ -336,72 +371,80 @@ public class EvaluatorTests
     [Fact]
     public void Selected_unavailable_option_is_an_error()
     {
-        var r = Eval(new() { ["dormant"] = 50, ["volet"] = true });
+        var r = Eval(new() { ["volet"] = true });
 
         Assert.False(r.Valid);
-        Assert.Contains(VoletDormant50, r.Errors);
+        Assert.Contains(VoletDormant60, r.Errors);
     }
 
     [Fact]
     public void Auto_added_unavailable_option_is_an_error()
     {
-        // La motorisation ajoute le volet (A5), mais le dormant de 50 mm l'interdit
-        var r = Eval(new() { ["dormant"] = 50, ["motorisation"] = true });
+        // La motorisation ajoute le volet (A5), mais le dormant de 60 mm l'interdit
+        var r = Eval(new() { ["motorisation"] = true });
 
         Assert.True(Option(r, "volet").AutoAdded);
         Assert.Equal("motorisation", Option(r, "volet").AutoAddedBy);
         Assert.False(Option(r, "volet").Available);
         Assert.False(r.Valid);
-        Assert.Contains(VoletDormant50, r.Errors);
+        Assert.Contains(VoletDormant60, r.Errors);
     }
 
     [Fact]
     public void Message_is_filled_with_the_current_value()
     {
-        var r = Eval(new() { ["couleur"] = "chene" });
+        var r = Eval(new() { ["dormant"] = "Dormant de 60mm" });
 
-        Assert.False(Option(r, "croisillons").Available);
-        Assert.Contains("Les croisillons n'existent pas en chene.", Option(r, "croisillons").Reasons);
+        Assert.Contains("Le dormant doit être d'au moins 100mm (actuel: Dormant de 60mm)", Option(r, "volet").Reasons);
     }
 
     [Fact]
     public void Both_incompatible_options_selected_is_an_error()
     {
-        var r = Eval(new() { ["croisillons"] = true, ["feuillete"] = true });
+        var r = Eval(WithIncompatibility, new() { ["oscillo"] = true, ["feuillete"] = true });
 
         Assert.False(r.Valid);
-        Assert.Contains(CroisillonsFeuillete, r.Errors);
+        Assert.Contains(OscilloFeuillete, r.Errors);
     }
 
     [Fact]
     public void Selected_option_greys_out_the_incompatible_one()
     {
-        var r = Eval(new() { ["croisillons"] = true });
+        var r = Eval(WithIncompatibility, new() { ["oscillo"] = true });
 
         Assert.Empty(r.Errors);
-        Assert.True(Option(r, "croisillons").Available);
+        Assert.True(Option(r, "oscillo").Available);
         Assert.False(Option(r, "feuillete").Available);
-        Assert.Contains(CroisillonsFeuillete, Option(r, "feuillete").Reasons);
+        Assert.Contains(OscilloFeuillete, Option(r, "feuillete").Reasons);
     }
 
     [Fact]
     public void Incompatibility_works_both_ways()
     {
-        var r = Eval(new() { ["feuillete"] = true });
+        var r = Eval(WithIncompatibility, new() { ["feuillete"] = true });
 
         Assert.Empty(r.Errors);
-        Assert.False(Option(r, "croisillons").Available);
-        Assert.Contains(CroisillonsFeuillete, Option(r, "croisillons").Reasons);
+        Assert.False(Option(r, "oscillo").Available);
+        Assert.Contains(OscilloFeuillete, Option(r, "oscillo").Reasons);
     }
 
     [Fact]
     public void Option_can_have_several_reasons()
     {
-        // Croisillons : pas en chêne (availableIf) ET incompatibles avec le feuilleté
-        var r = Eval(new() { ["couleur"] = "chene", ["feuillete"] = true });
+        // Volet : dormant trop fin (availableIf) ET incompatible avec le feuilleté (règle ajoutée)
+        Product product = With(new Rule
+        {
+            Id = "volet-feuillete",
+            Type = RuleType.Incompatible,
+            Option = "volet",
+            Other = "feuillete",
+            Message = "Pas de volet avec le vitrage feuilleté.",
+        });
 
-        Assert.Equal(2, Option(r, "croisillons").Reasons.Count);
-        Assert.Empty(r.Errors);   // les croisillons ne sont pas cochés
+        var r = Eval(product, new() { ["feuillete"] = true });
+
+        Assert.Equal(2, Option(r, "volet").Reasons.Count);
+        Assert.Empty(r.Errors);   // le volet n'est pas coché
     }
 
     // ---------- A7 : surcharges ----------
@@ -443,6 +486,27 @@ public class EvaluatorTests
         Assert.False(HasLine(r, "Plus-value couleur"));
     }
 
+    [Theory]
+    [InlineData("Poignée en laiton", "Plus value poignée en laiton", 15)]
+    [InlineData("Poignée moderne inox", "Plus value poignée moderne inox", 50)]
+    public void Handle_choice_adds_its_surcharge(string poignee, string label, int amount)
+    {
+        var r = Eval(new() { ["poignee"] = poignee });
+
+        Assert.Empty(r.Errors);
+        Assert.Equal(amount, LineAmount(r, label));
+        Assert.Equal(419m + amount, r.Total);
+    }
+
+    [Fact]
+    public void Default_handle_has_no_surcharge()
+    {
+        var r = Eval(new() { ["poignee"] = "Poignée en titane" });
+
+        Assert.False(HasLine(r, "Plus value poignée en laiton"));
+        Assert.False(HasLine(r, "Plus value poignée moderne inox"));
+    }
+
     [Fact]
     public void Large_window_with_tilt_and_turn_gets_reinforcement()
     {
@@ -463,10 +527,11 @@ public class EvaluatorTests
     [Fact]
     public void Several_surcharges_can_apply()
     {
-        var r = Eval(new() { ["couleur"] = "gris", ["largeur"] = 1800, ["oscillo"] = true });
+        var r = Eval(new() { ["couleur"] = "gris", ["largeur"] = 1800, ["oscillo"] = true, ["poignee"] = "Poignée en laiton" });
 
         Assert.True(HasLine(r, "Plus-value couleur"));
         Assert.True(HasLine(r, "Renfort grande largeur"));
+        Assert.True(HasLine(r, "Plus value poignée en laiton"));
     }
 
     [Fact]
@@ -493,7 +558,7 @@ public class EvaluatorTests
     public void Reference_grey_with_motor()
     {
         // 419 (base) + 216 (volet ajouté) + 180 (motorisation) + 50,28 (plus-value couleur)
-        var r = Eval(new() { ["couleur"] = "gris", ["motorisation"] = true });
+        var r = Eval(new() { ["couleur"] = "gris", ["motorisation"] = true, ["dormant"] = Dormant100 });
 
         Assert.True(r.Valid);
         Assert.Equal(865.28m, r.Total);
@@ -503,10 +568,12 @@ public class EvaluatorTests
     [Fact]
     public void Reference_grey_with_motor_and_thin_frame_is_invalid()
     {
-        var r = Eval(new() { ["couleur"] = "gris", ["motorisation"] = true, ["dormant"] = 50 });
+        // Même prix, mais le dormant par défaut (60 mm) interdit le volet ajouté par la motorisation
+        var r = Eval(new() { ["couleur"] = "gris", ["motorisation"] = true });
 
         Assert.False(r.Valid);
-        Assert.Contains(VoletDormant50, r.Errors);
+        Assert.Equal(865.28m, r.Total);
+        Assert.Contains(VoletDormant60, r.Errors);
     }
 
     [Fact]
@@ -530,7 +597,14 @@ public class EvaluatorTests
     [Fact]
     public void Total_is_the_sum_of_all_lines()
     {
-        var r = Eval(new() { ["couleur"] = "gris", ["largeur"] = 1800, ["oscillo"] = true, ["feuillete"] = true });
+        var r = Eval(new()
+        {
+            ["couleur"] = "gris",
+            ["largeur"] = 1800,
+            ["oscillo"] = true,
+            ["feuillete"] = true,
+            ["poignee"] = "Poignée moderne inox",
+        });
 
         decimal sum = 0;
         foreach (PriceLine line in r.PriceLines)
@@ -563,14 +637,24 @@ public class EvaluatorTests
     [InlineData("en-US")]
     public void Message_values_do_not_depend_on_culture(string culture)
     {
+        // Le produit n'a pas de message avec un nombre : on ajoute une règle qui en affiche un
+        Product product = With(new Rule
+        {
+            Id = "oscillo-largeur",
+            Type = RuleType.AvailableIf,
+            Option = "oscillo",
+            When = { new Condition { Param = "largeur", Op = Op.Lte, Value = JsonSerializer.SerializeToElement(2000) } },
+            Message = "Largeur de {largeur} mm : trop large pour l'oscillo-battant.",
+        });
+
         CultureInfo previous = CultureInfo.CurrentCulture;
         try
         {
             CultureInfo.CurrentCulture = new CultureInfo(culture);
 
-            var r = Eval(new() { ["volet"] = true, ["dormant"] = 50.5m });
+            var r = Eval(product, new() { ["oscillo"] = true, ["largeur"] = 2100.5m });
 
-            Assert.Contains("Dormant de 50.5 mm : il faut au moins 60 mm pour un volet roulant.", r.Errors);
+            Assert.Contains("Largeur de 2100.5 mm : trop large pour l'oscillo-battant.", r.Errors);
         }
         finally
         {

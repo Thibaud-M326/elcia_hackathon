@@ -1,0 +1,155 @@
+# Requetes d'exemple pour l'API de chiffrage.
+# Lancer l'API : dotnet run --project src/Api
+# Puis "Send Request" au-dessus de chaque requete (VS Code + REST Client, ou Rider).
+# Le fichier peut etre lance de haut en bas : la derniere requete remet un brouillon valide.
+
+@host = http://localhost:5080
+@id = fenetre-pvc-2v
+
+### Sante de l'API
+# Attendu : 200, "ok"
+GET {{host}}/health
+
+###############################################################################
+# Produits
+###############################################################################
+
+### Liste des produits
+# Attendu : 200, [{ "id": "fenetre-pvc-2v", ..., "publishedVersion": 1 }]
+GET {{host}}/products
+
+### Lire le brouillon
+# Attendu : 200, le produit complet
+GET {{host}}/products/{{id}}/draft
+
+### Enregistrer le brouillon (corps lu dans le modele d'exemple)
+# Attendu : 204
+PUT {{host}}/products/{{id}}/draft
+Content-Type: application/json
+
+< ../../samples/product-model-v1.json
+
+### Publier le brouillon
+# Attendu : 200, { "version": N } (N augmente a chaque publication)
+POST {{host}}/products/{{id}}/publish
+
+### Lire la derniere version publiee
+# Attendu : 200, le produit (sert a construire le formulaire)
+GET {{host}}/products/{{id}}/published
+
+### Lire une version precise
+# Attendu : 200, la version 1
+GET {{host}}/products/{{id}}/published?version=1
+
+###############################################################################
+# Chiffrage : cas de reference
+###############################################################################
+
+### Configuration par defaut
+# Attendu : 200, valid: true, total: 419
+POST {{host}}/products/{{id}}/evaluate
+Content-Type: application/json
+
+{}
+
+### Gris + motorisation
+# Attendu : 200, valid: true, total: 865.28 (419 + 216 + 180 + 50.28)
+# Le volet est ajoute automatiquement : "autoAdded": true
+POST {{host}}/products/{{id}}/evaluate
+Content-Type: application/json
+
+{
+  "couleur": "gris",
+  "motorisation": true
+}
+
+### Gris + motorisation + dormant 50
+# Attendu : 200, valid: false MAIS total: 865.28
+# Erreur : "Dormant de 50 mm : il faut au moins 60 mm pour un volet roulant."
+POST {{host}}/products/{{id}}/evaluate
+Content-Type: application/json
+
+{
+  "couleur": "gris",
+  "motorisation": true,
+  "dormant": 50
+}
+
+### Dimensions non fabricables
+# Attendu : 200, valid: false, total: null
+# Erreur : "Dimensions 2400 x 2100 non fabricables."
+POST {{host}}/products/{{id}}/evaluate
+Content-Type: application/json
+
+{
+  "largeur": 2400,
+  "hauteur": 2100
+}
+
+### Saisie hors limites : ce n'est PAS une erreur HTTP
+# Attendu : 200, valid: false, total: null
+# Erreur : "Largeur (mm) : maximum 2400 (saisi : 5000)."
+POST {{host}}/products/{{id}}/evaluate
+Content-Type: application/json
+
+{
+  "largeur": 5000
+}
+
+### Chiffrer sur une version precise
+# Attendu : 200, "version": 1
+POST {{host}}/products/{{id}}/evaluate?version=1
+Content-Type: application/json
+
+{}
+
+###############################################################################
+# Cas d'erreur
+###############################################################################
+
+### Produit inconnu
+# Attendu : 404
+GET {{host}}/products/inconnu/draft
+
+### Chiffrer une version qui n'existe pas
+# Attendu : 404
+POST {{host}}/products/{{id}}/evaluate?version=99
+Content-Type: application/json
+
+{}
+
+### Identifiant invalide (tentative de sortir du dossier data/)
+# Attendu : 400, { "errors": ["Identifiant de produit invalide. ..."] }
+GET {{host}}/products/..%2Fpirate/draft
+
+### Identifiant du corps different de l'URL
+# Attendu : 400, { "errors": ["L'identifiant du corps ('autre-produit') ne correspond pas a l'URL ..."] }
+PUT {{host}}/products/{{id}}/draft
+Content-Type: application/json
+
+{
+  "id": "autre-produit"
+}
+
+### Enregistrer un brouillon invalide ("rouge" n'est pas une couleur du produit)
+# Attendu : 204 (le brouillon est enregistre, il n'est verifie qu'a la publication)
+PUT {{host}}/products/{{id}}/draft
+Content-Type: application/json
+
+< ./requests/draft-invalid.json
+
+### Publier le brouillon invalide
+# Attendu : 422, aucune nouvelle version creee
+# { "errors": ["Regle 5 ('couleur-hors-blanc'), condition 1 : le choix 'rouge' est absent de 'couleur'."] }
+POST {{host}}/products/{{id}}/publish
+
+###############################################################################
+# Remise en etat
+###############################################################################
+
+### Remettre un brouillon valide
+# Attendu : 204
+PUT {{host}}/products/{{id}}/draft
+Content-Type: application/json
+
+< ../../samples/product-model-v1.json

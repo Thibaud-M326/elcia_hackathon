@@ -10,4 +10,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Remove="requests/**" />
+    <None Include="requests/**" />
+  </ItemGroup>
+
 </Project>

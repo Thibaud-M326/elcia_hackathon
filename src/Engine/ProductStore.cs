@@ -169,7 +169,6 @@ public class ProductStore
 
     private static Product CopyProduct(Product product)
     {
-        // Une modification par l'appelant ne doit pas changer une version déjà publiée.
         JsonElement snapshot = JsonSerializer.SerializeToElement(product, Json.Options);
         return snapshot.Deserialize<Product>(Json.Options)!;
     }

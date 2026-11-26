@@ -11,14 +11,15 @@ interface AppLayoutProps {
 	title: string;
 	breadcrumb?: string;
 	nav: NavItem[];
+	confirmLeave?: () => boolean;
 	children: ReactNode;
 }
 
-export default function AppLayout({ title, breadcrumb, nav, children }: AppLayoutProps) {
+export default function AppLayout({ title, breadcrumb, nav, confirmLeave, children }: AppLayoutProps) {
 	return (
 		<div className={styles.layout}>
 			<aside className={styles.sidebar}>
-				<div className={styles.logo}>MYPRICER</div>
+				<div className={styles.logo}>42 PRICER</div>
 				<nav aria-label="Menu principal">
 					<ul className={styles.nav}>
 						{nav.map((item) => (
@@ -27,6 +28,9 @@ export default function AppLayout({ title, breadcrumb, nav, children }: AppLayou
 									href={item.href}
 									className={`${styles.navLink}${item.active ? ` ${styles.active}` : ''}`}
 									aria-current={item.active ? 'page' : undefined}
+									onClick={(e) => {
+										if (!item.active && confirmLeave && !confirmLeave()) e.preventDefault();
+									}}
 								>
 									{item.label}
 								</a>

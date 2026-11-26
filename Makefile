@@ -1,16 +1,16 @@
 # Commandes du projet. Lancer `make` (ou `make help`) pour la liste.
 #
 # Variables modifiables à l'appel, ex. : make load-test RATE=20000 DURATION=30
-#   URL          API visée par le test de charge        (défaut : l'API de test, port 5099)
+#   URL          API visée par le test de charge        (défaut : http://localhost:5080)
 #   RATE         requêtes par minute, débit constant    (défaut : 5000 ; paliers : 5000,20000)
 #   CONCURRENCY  clients en parallèle, débit maximal    (défaut : 16,64)
 #   DURATION     durée de chaque palier, en secondes    (défaut : 60)
 #   ARGS         configuration pour `make sandbox`      (ex. : ARGS="couleur=gris motorisation=true")
 
-URL         ?= http://localhost:5099
+URL         ?= http://localhost:5080
 RATE        ?= 5000
 CONCURRENCY ?= 16,64
-DURATION    ?= 60
+DURATION    ?= 5
 ARGS        ?=
 
 # Données de l'API de test, séparées de data/ (le test de charge y publie des versions)
@@ -67,8 +67,8 @@ sandbox: ## Chiffrer sans l'API (ARGS="couleur=gris motorisation=true" pour une 
 bench: ## Mesurer le moteur seul (100 000 calculs, Release)
 	dotnet run -c Release --project tools/Sandbox -- --benchmark
 
-api-bench: ## Lancer une API de test en Release, port 5099, données dans .bench/
-	dotnet run -c Release --project src/Api --urls http://localhost:5099 -- --DataDir=$(BENCH_DATA)
+api-bench: ## Lancer une API de test en Release, port 5080, données dans .bench/ (arrêter make api avant)
+	dotnet run -c Release --project src/Api --urls http://localhost:5080 -- --DataDir=$(BENCH_DATA)
 
 load-test: ## Test de charge à débit constant (RATE, DURATION, URL) ; lancer api-bench avant
 	dotnet run -c Release --project tools/LoadTest -- --url $(URL) --rate $(RATE) --duration $(DURATION)

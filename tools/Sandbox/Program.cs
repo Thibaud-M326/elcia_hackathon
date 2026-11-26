@@ -1,13 +1,21 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using Engine;
 
 // Bac à sable : évaluer une configuration sans l'API.
 //
 //   dotnet run --project tools/Sandbox                              -> scénarios de référence
 //   dotnet run --project tools/Sandbox -- couleur=gris motorisation=true dormant=50
+//   dotnet run --project tools/Sandbox -c Release -- --benchmark
 
 string path = Path.Combine(AppContext.BaseDirectory, "product-model-v1.json");
 Product product = Json.ReadProduct(path);
+
+if (args.Length == 1 && args[0] == "--benchmark")
+{
+    RunBenchmark(product);
+    return;
+}
 
 if (args.Length > 0)
 {
@@ -19,6 +27,52 @@ else
     Show(new() { ["couleur"] = "gris", ["motorisation"] = true });
     Show(new() { ["couleur"] = "gris", ["motorisation"] = true, ["dormant"] = 50m });
     Show(new() { ["largeur"] = 2400m, ["hauteur"] = 2100m });
+}
+
+static void RunBenchmark(Product product)
+{
+    const int evaluationCount = 100_000;
+    const int warmupCount = 1_000;
+    Random random = new(42);
+    List<Dictionary<string, object?>> inputs = new(evaluationCount);
+
+    for (int i = 0; i < evaluationCount; i++)
+    {
+        Dictionary<string, object?> input = new();
+        foreach (Parameter parameter in product.Parameters)
+        {
+            if (parameter.Type == ParamType.Number && parameter.Min.HasValue && parameter.Max.HasValue)
+            {
+                decimal min = parameter.Min.Value;
+                decimal range = parameter.Max.Value - min;
+                decimal fraction = (decimal)random.NextDouble();
+                input[parameter.Id] = min + range * fraction;
+            }
+            else if (parameter.Type == ParamType.Choice && parameter.Choices is { Count: > 0 })
+            {
+                int choiceIndex = random.Next(parameter.Choices.Count);
+                input[parameter.Id] = parameter.Choices[choiceIndex];
+            }
+            else if (parameter.Type == ParamType.Option)
+            {
+                input[parameter.Id] = random.Next(2) == 1;
+            }
+        }
+        inputs.Add(input);
+    }
+
+    for (int i = 0; i < warmupCount; i++)
+        Evaluator.Evaluate(product, 1, inputs[i]);
+
+    Stopwatch timer = Stopwatch.StartNew();
+    foreach (Dictionary<string, object?> input in inputs)
+        Evaluator.Evaluate(product, 1, input);
+    timer.Stop();
+
+    double totalMicroseconds = timer.Elapsed.TotalMicroseconds;
+    double averageMicroseconds = totalMicroseconds / evaluationCount;
+    Console.WriteLine($"{evaluationCount} chiffrages en {timer.Elapsed.TotalMilliseconds:F2} ms.");
+    Console.WriteLine($"Temps moyen : {averageMicroseconds:F2} µs par chiffrage.");
 }
 
 void Show(Dictionary<string, object?> input)

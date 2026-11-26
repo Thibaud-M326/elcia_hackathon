@@ -80,14 +80,17 @@ curl -X POST http://localhost:5080/products/fenetre-pvc-2v/evaluate \
 Une configuration invalide (largeur trop grande...) n'est pas une erreur HTTP : la réponse est un
 `200` avec `valid: false` et la liste des erreurs.
 
-## Calculer sans l'API
+## Essayer le moteur avec le Sandbox
+
+Le Sandbox charge le produit d'exemple [`samples/product-model-v1.json`](samples/product-model-v1.json)
+et appelle directement le moteur C#. Il affiche le détail du devis, son total, l'état des options et
+les éventuelles erreurs dans le terminal. Lance les commandes suivantes depuis la racine du dépôt.
+
+### Jouer les scénarios de référence
 
 ```bash
-dotnet run --project tools/Sandbox                                           # scénarios de référence
-dotnet run --project tools/Sandbox -- couleur=gris motorisation=true dormant=50
+dotnet run --project tools/Sandbox
 ```
-
-Prix de référence du produit d'exemple :
 
 | Configuration | Résultat |
 |---|---|
@@ -95,6 +98,25 @@ Prix de référence du produit d'exemple :
 | gris + motorisation | 865,28 €, valide, volet ajouté automatiquement |
 | gris + motorisation + dormant 50 | 865,28 € mais **invalide** (dormant trop fin pour le volet) |
 | largeur 2400 x hauteur 2100 | pas de prix, dimensions non fabricables |
+
+### Essayer une configuration
+
+Après `--`, indique les paramètres à modifier sous la forme `clé=valeur`. Le moteur utilise les
+valeurs par défaut du produit pour les paramètres que tu omets, comme la largeur dans cet exemple.
+
+```bash
+dotnet run --project tools/Sandbox -- couleur=gris motorisation=true dormant=50
+```
+
+### Mesurer la vitesse du chiffrage
+
+```bash
+dotnet run --project tools/Sandbox -c Release -- --benchmark
+```
+
+Le Sandbox prépare 100 000 configurations aléatoires et effectue 1 000 appels d'échauffement avant
+de démarrer le chronomètre. Il mesure ensuite les appels au moteur et affiche le temps total en
+millisecondes ainsi que le temps moyen par chiffrage en microsecondes.
 
 ## Configuration
 

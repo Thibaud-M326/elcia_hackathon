@@ -68,5 +68,6 @@ public class Condition
     public string Param { get; set; } = "";
     public Op Op { get; set; }
 
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public JsonElement Value { get; set; }
 }

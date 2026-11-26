@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Engine;
 
@@ -135,7 +136,7 @@ public class EvaluatorTests
 
         Assert.False(r.Valid);
         Assert.Null(r.Total);
-        Assert.Contains("Dimensions 2400 × 2100 non fabricables.", r.Errors);
+        Assert.Contains("Dimensions 2400 x 2100 non fabricables.", r.Errors);
         Assert.Empty(r.PriceLines);
     }
 
@@ -151,9 +152,9 @@ public class EvaluatorTests
             new Dictionary<string, object?> { ["largeur"] = 1400, ["hauteur"] = 1100 });
 
         Assert.False(exact.Valid);
-        Assert.Contains("Dimensions 1500 × 1200 non fabricables.", exact.Errors);
+        Assert.Contains("Dimensions 1500 x 1200 non fabricables.", exact.Errors);
         Assert.False(nextStep.Valid);
-        Assert.Contains("Dimensions 1400 × 1100 non fabricables.", nextStep.Errors);
+        Assert.Contains("Dimensions 1400 x 1100 non fabricables.", nextStep.Errors);
     }
 
     // ---------- A3 : prix des options ----------
@@ -536,5 +537,37 @@ public class EvaluatorTests
     {
         Assert.Equal(3, Evaluator.Evaluate(P, 3, new Dictionary<string, object?>()).Version);
         Assert.Equal(3, Evaluator.Evaluate(P, 3, new Dictionary<string, object?> { ["largeur"] = 5000 }).Version);
+    }
+
+    [Fact]
+    public void Values_are_returned_on_input_error()
+    {
+        var r = Eval(new() { ["largeur"] = 5000 });
+
+        Assert.False(r.Valid);
+        Assert.Null(r.Total);
+        Assert.False(r.Values.ContainsKey("largeur"));
+        Assert.Equal(1200m, r.Values["hauteur"]);
+        Assert.Equal("blanc", r.Values["couleur"]);
+    }
+
+    [Theory]
+    [InlineData("fr-FR")]
+    [InlineData("en-US")]
+    public void Message_values_do_not_depend_on_culture(string culture)
+    {
+        CultureInfo previous = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo(culture);
+
+            var r = Eval(new() { ["volet"] = true, ["dormant"] = 50.5m });
+
+            Assert.Contains("Dormant de 50.5 mm : il faut au moins 60 mm pour un volet roulant.", r.Errors);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
     }
 }

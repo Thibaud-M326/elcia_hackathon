@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 debug/*
 # Consignes locales pour Codex
 /AGENTS.md
+
+# Donnees de l API (brouillons et versions publiees)
+/data/

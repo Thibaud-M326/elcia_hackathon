@@ -7,17 +7,23 @@ interface OptionItemProps {
 	checked: boolean;
 	available: boolean;
 	autoAdded: boolean;
+	autoAddedByLabel?: string;
 	reasons: string[];
 	amount?: string;
 	onChange: (checked: boolean) => void;
 }
 
-export default function OptionItem({ id, label, checked, available, autoAdded, reasons, amount, onChange }: OptionItemProps) {
+export default function OptionItem({
+	id, label, checked, available, autoAdded, autoAddedByLabel, reasons, amount, onChange,
+}: OptionItemProps) {
 	const disabled = autoAdded || (!available && !checked);
 	const reasonsId = `${id}-reasons`;
 	const amountId = `${id}-amount`;
+	const autoReasonId = `${id}-auto-reason`;
+	const showAutoReason = autoAdded && autoAddedByLabel;
 	const descriptions: string[] = [];
 	if (amount) descriptions.push(amountId);
+	if (showAutoReason) descriptions.push(autoReasonId);
 	if (reasons.length > 0) descriptions.push(reasonsId);
 
 	return (
@@ -39,6 +45,9 @@ export default function OptionItem({ id, label, checked, available, autoAdded, r
 				{!available && <Badge tone="warning">Indisponible</Badge>}
 				{amount && <span id={amountId} className={styles.amount}>{amount}</span>}
 			</div>
+			{showAutoReason && (
+				<p id={autoReasonId} className={styles.autoReason}>Ajouté par {autoAddedByLabel}</p>
+			)}
 			{reasons.length > 0 && (
 				<ul id={reasonsId} className={styles.reasons}>
 					{reasons.map((reason) => (

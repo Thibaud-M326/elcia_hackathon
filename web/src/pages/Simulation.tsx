@@ -144,6 +144,8 @@ export default function Simulation({ productId }: { productId: string }) {
 						<ul className={styles.options}>
 							{options.map((param) => {
 								const state = result?.options.find((o) => o.id === param.id);
+								const sourceId = state?.autoAddedBy;
+								const sourceLabel = result?.options.find((o) => o.id === sourceId)?.label;
 								const amount = lineAmount(param.label);
 								let priceLabel = formatOptionPrice(param.price, product.parameters);
 								if (param.price && state?.selected && amount !== undefined) {
@@ -157,6 +159,7 @@ export default function Simulation({ productId }: { productId: string }) {
 										checked={state?.selected ?? config[param.id] === true}
 										available={state?.available ?? true}
 										autoAdded={state?.autoAdded ?? false}
+										autoAddedByLabel={sourceLabel}
 										reasons={state?.reasons ?? []}
 										amount={priceLabel}
 										onChange={(checked) => setValue(param.id, checked)}

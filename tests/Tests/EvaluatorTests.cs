@@ -242,6 +242,7 @@ public class EvaluatorTests
         Assert.Equal(5, r.Options.Count);   // oscillo, croisillons, feuillete, volet, motorisation
         Assert.All(r.Options, o => Assert.False(o.Selected));
         Assert.All(r.Options, o => Assert.False(o.AutoAdded));
+        Assert.All(r.Options, o => Assert.Null(o.AutoAddedBy));
         Assert.Equal("Volet roulant", Option(r, "volet").Label);
     }
 
@@ -253,6 +254,7 @@ public class EvaluatorTests
         Assert.Empty(r.Errors);
         Assert.True(Option(r, "volet").Selected);
         Assert.True(Option(r, "volet").AutoAdded);
+        Assert.Equal("motorisation", Option(r, "volet").AutoAddedBy);
         Assert.Equal(216m, LineAmount(r, "Volet roulant"));        // 0,18 € × 1200 mm
         Assert.Equal(180m, LineAmount(r, "Motorisation du volet"));
     }
@@ -264,6 +266,7 @@ public class EvaluatorTests
 
         Assert.True(Option(r, "volet").Selected);
         Assert.False(Option(r, "volet").AutoAdded);
+        Assert.Null(Option(r, "volet").AutoAddedBy);
     }
 
     [Fact]
@@ -273,6 +276,7 @@ public class EvaluatorTests
 
         Assert.True(Option(r, "volet").Selected);
         Assert.False(Option(r, "volet").AutoAdded);
+        Assert.Null(Option(r, "volet").AutoAddedBy);
     }
 
     [Fact]
@@ -286,6 +290,8 @@ public class EvaluatorTests
 
         Assert.True(Option(r, "motorisation").AutoAdded);
         Assert.True(Option(r, "volet").AutoAdded);
+        Assert.Equal("oscillo", Option(r, "motorisation").AutoAddedBy);
+        Assert.Equal("oscillo", Option(r, "volet").AutoAddedBy);
         Assert.False(Option(r, "oscillo").AutoAdded);
     }
 
@@ -343,6 +349,7 @@ public class EvaluatorTests
         var r = Eval(new() { ["dormant"] = 50, ["motorisation"] = true });
 
         Assert.True(Option(r, "volet").AutoAdded);
+        Assert.Equal("motorisation", Option(r, "volet").AutoAddedBy);
         Assert.False(Option(r, "volet").Available);
         Assert.False(r.Valid);
         Assert.Contains(VoletDormant50, r.Errors);

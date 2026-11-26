@@ -43,10 +43,18 @@
 	white-space: nowrap;
 }
 
-.reasons {
+.reasons,
+.autoReason {
 	margin: 2px 0 0 32px;
 	padding: 0;
-	list-style: none;
 	font-size: 14px;
+}
+
+.autoReason {
+	color: var(--muted);
+}
+
+.reasons {
+	list-style: none;
 	color: var(--warning);
 }

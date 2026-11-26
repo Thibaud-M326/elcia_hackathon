@@ -36,6 +36,24 @@
 	color: var(--muted);
 }
 
+/* Choix de la version + Réinitialiser, alignés en bas */
+.headerActions {
+	display: flex;
+	align-items: flex-end;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.oldVersion {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: -8px;
+	color: var(--warning-strong);
+	font-size: 15px;
+}
+
 .fields {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
